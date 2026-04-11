@@ -3,6 +3,8 @@
 //For use with Rarduino-Pico Plugin by EarlePhilhower
 //Copyright (c) 2025 Rack Robotics, Inc. All rights reserved.
 //This firmware is for Powercore hardware revision F & G
+//
+// Modified as needed for the WPS system by Daniel Monahan for the EPL
 
 // Software Version
 const String SOFTWARE_VERSION = "1.1.0-beta";

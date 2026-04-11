@@ -1,6 +1,15 @@
-# Powercore V3
+# EPL's Wire EDM Wire Power Supply (WPS)
 
-A high-efficiency power supply unit designed for Electrical Discharge Machining (EDM) applications.
+A high-efficiency power supply unit designed for Electrical Discharge Machining (EDM) applications. The design is based on the Rack Robotics Powercore V3 and owes much to their engineering efforts.
+
+## EPL Contributions
+
+The EPL has reworked a few aspects of the Rack Robotics Powercore V3 for use in it's CNC-Type Wire EDM. Primarily, we've made use of 2.54mm pin headers in place of the spring-based connectors, or Pogo pins, to simplify construction without the enclosure. Other modifications have been made the the firmware project structure, separating sensor drivers, boost converter, fault handling, and other portions of the project into a modular C++ library.
+
+If you would like to explore or purchase the original PowerCore V3, please vist Rack Robotics at
+![The originial PowerCore V3 Repo](https://github.com/Rack-Robotics/Powercore-V3)
+and
+![Rackrobo.io](https://rackrobo.io/products/powercore-v3)
 
 ## Repository Structure
 
@@ -8,7 +17,7 @@ A high-efficiency power supply unit designed for Electrical Discharge Machining 
 - `schematics/` - Schematic PDFs for electronics
 - `KiCAD-library/` - Custom component library and 3D models
 - `LTSpice/` - Simulation files
-- `powercoreV3-firmware/` - Arduino firmware for the RP2040 controller
+- `firmware/` - Arduino firmware for the RP2040 controller
 
 ## Table of Contents
 
@@ -257,8 +266,29 @@ Startup behavior of device. Two seconds are required for inrush protection and s
 
 ![Powercore V3 Waveform 5](images/powercore-v3-waveform-06.png)
 
+## ⚠️ HIGH VOLTAGE SAFETY WARNING ⚠️
+
+**DANGER - HIGH VOLTAGE PRESENT**
+This device generates and outputs high-voltage DC, which could be hazardous. Before operating, building, or servicing this equipment, read and understand all safety warnings.
+
+ELECTRICAL HAZARDS
+- **DANGEROUS VOLTAGES PRESENT**: Output voltages up to 150V DC can cause electrical shock or burns
+- **STORED ENERGY**: Internal capacitors retain dangerous voltages even when power is disconnected
+- **DISCHARGES**: High-energy discharges can cause burns, eye damage, and ignite flammable materials
+
+LEGAL DISCLAIMER
+- Users assume all responsibility for safe operation and compliance with local electrical codes
+- This equipment is intended for use by qualified professionals only
+- Improper use may result in serious injury, death, or property damage
+- The manufacturer disclaims all liability for injuries or damages resulting from improper use
+**IF YOU ARE NOT QUALIFIED TO WORK WITH HIGH-VOLTAGE EQUIPMENT, DO NOT PROCEED**
+
+## Attribution
+The documentation here has been provided without modification from RackRobotics Inc.'s original PowerCoreV3 Repository
+[![Github](https://github.com/Rack-Robotics/Powercore-V3)]
+
 ## LICENSE 
-The Powercore V3 2025 by Rack Robotics, Inc. is licensed under the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
+The WPS by the Electronics Prototyping Laboratory has inherited the Creative Commons Attribution-NonCommercial-ShareAlike 4.0 International License (CC BY-NC-SA 4.0).
 
 ### You are free to:
 - **Share** — copy and redistribute the material in any medium or format
@@ -278,23 +308,3 @@ No warranties are given. The license may not give you all of the permissions nec
 For the full license text, see: https://creativecommons.org/licenses/by-nc-sa/4.0/
 
 This includes all hardware designs, firmware, documentation, and associated files in this repository. Commercial use requires explicit written permission from the project maintainers. 
-
-### Trademark
-The name 'Powercore' and 'Rack Robotics' are property of Rack Robotics, Inc. and are only to be used by Rack Robotics, Inc. Any derivative works must remove both marks unless written permission to use either or both marks is provided by Rack Robotics, Inc.
-
-## ⚠️ HIGH VOLTAGE SAFETY WARNING ⚠️
-
-**DANGER - HIGH VOLTAGE PRESENT**
-This device generates and outputs high-voltage DC, which could be hazardous. Before operating, building, or servicing this equipment, read and understand all safety warnings.
-
-ELECTRICAL HAZARDS
-- **DANGEROUS VOLTAGES PRESENT**: Output voltages up to 150V DC can cause electrical shock or burns
-- **STORED ENERGY**: Internal capacitors retain dangerous voltages even when power is disconnected
-- **DISCHARGES**: High-energy discharges can cause burns, eye damage, and ignite flammable materials
-
-LEGAL DISCLAIMER
-- Users assume all responsibility for safe operation and compliance with local electrical codes
-- This equipment is intended for use by qualified professionals only
-- Improper use may result in serious injury, death, or property damage
-- The manufacturer disclaims all liability for injuries or damages resulting from improper use
-**IF YOU ARE NOT QUALIFIED TO WORK WITH HIGH-VOLTAGE EQUIPMENT, DO NOT PROCEED**
