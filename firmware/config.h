@@ -1,0 +1,7 @@
+/* config.h
+ *
+ * CONTENTS:
+ *     PIN ASSIGNMENTS
+ *     CONSTANTS
+ *     INITIAL OPERATION STATE
+ */

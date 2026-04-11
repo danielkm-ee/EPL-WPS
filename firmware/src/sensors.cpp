@@ -1,0 +1,7 @@
+/* sensors.cpp
+ *
+ * CONTENTS
+ *     ADC INITIALIZATION
+ *     CURRENT/VOLTAGE SENSOR CALIBRATION
+ *     READING LOGIC
+ */

@@ -1,0 +1,7 @@
+/* sensors.h
+ *
+ * CONTENTS
+ *     ADC INITIALIZATION
+ *     CURRENT/VOLTAGE SENSOR CALIBRATION
+ *     READING LOGIC
+ */
