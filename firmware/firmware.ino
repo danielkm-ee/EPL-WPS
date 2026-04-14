@@ -177,7 +177,7 @@ const int PMM_CALIBRATION_DELAY_MS = 1;                // Delay between PMM cali
 // Output Current Sensor Constants
 const float ISENSE_OUTPUT_V_PER_AMP = 0.025f;                   // 25 mV per amp for output current sensor (TMCS1133C1A)
 const int ISENSE_OUTPUT_AMPS_PER_VOLT = 40;                     // 40 amps per volt for output current sensor (TMCS1133C1A)
-const float OUTPUT_CURRENT_ZERO_OFFSET = 0.33f;                 // Zero current offset of output current sensor (TMCS1133C1A), in volts
+const float OUTPUT_CURRENT_ZERO_OFFSET = 0.33f;                 // Zero current offset of output current sensor (TMCS1133C1A), in volts (FIXME unused)
 const int DEFAULT_OUTPUT_CURRENT_THRESHOLD_A = 8;              
 const int OUTPUT_CURRENT_SENSOR_CALIBRATION_SAMPLES = 100;      // Number of samples to take for output current sensor calibration
 const int OUTPUT_CURRENT_SENSOR_CALIBRATION_DELAY_MS = 1;       // Delay between output current sensor calibration samples in milliseconds
@@ -186,12 +186,12 @@ const int OUTPUT_CURRENT_SENSOR_CALIBRATION_DELAY_MS = 1;       // Delay between
 const float OUTPUT_VOLTAGE_SCALE = 0.08090972f;        // Pre-computed (3.3/4095) * 100.4 for output voltage scaling with 99.6:1 voltage divider
 
 // Fault Handling Configuration
-const bool PMM_FAULT_IN_USE = true;                     // Should always be true
-const bool HIGH_CURRENT_PGOOD_IN_USE = false;           // Set to false if Pi-Filter module is used in high-current phase
-const bool HIGH_VOLTAGE_PGOOD_IN_USE = true;            // Set to true if boost-converter module is used in high-voltage phase
-const bool dynamicFaultHandlingEnabled = true;          // If true, the device will dynamically handle faults based on the fault type
+const bool PMM_FAULT_IN_USE = true;                     // Should always be true (FIXME then just use 'true' ?)
+const bool HIGH_CURRENT_PGOOD_IN_USE = false;           // Set to false if Pi-Filter module is used in high-current phase (FIXME just set flag to check for module type?)
+const bool HIGH_VOLTAGE_PGOOD_IN_USE = true;            // Set to true if boost-converter module is used in high-voltage phase (FIXME ditto)
+const bool dynamicFaultHandlingEnabled = true;          // If true, the device will dynamically handle faults based on the fault type (FIXME unused)
 
-// Device State Variables
+// Device State Variables (FIXME make struct and typedef for these)
 volatile DeviceState deviceState = STARTUP;             // Current device state
 volatile DeviceState oldDeviceState = STARTUP;          // Previous device state, used for temporary state storage
 volatile ModeOfOperation modeOfOperation = EDM_ISOFREQUENCY_MODE;  // Current mode of operation
@@ -216,9 +216,9 @@ volatile int dischargesSinceOperationStarted = 0;       // Counter for number of
 volatile double dischargeSuccessRate = 0.00f;           // Current discharge success rate
 volatile double avgDischargeSuccessRate = 0.00f;        // Running average of discharge success rate
 volatile bool requestedDischargesReached = false;       // Flag to indicate if the requested number of discharges has been reached
-volatile double newDischargeSuccessRate = 0.00f;        // New discharge success rate
+// volatile double newDischargeSuccessRate = 0.00f;        // New discharge success rate FIXME (unused)
 
-// Current Measurement Variables
+// Current Measurement Variables (FIXME struct/typedef ?)
 volatile double inputCurrentReading = 0.00f;            // Current reading from PMM_ISENSE
 volatile int pmmISENSEAdcValue = 0;                     // Raw ADC reading from PMM current sensor
 volatile float deviceInputCurrentBuffer[DEVICE_CURRENT_BUFFER_SIZE];  // Circular buffer to store device current samples
@@ -226,30 +226,30 @@ volatile int deviceInputCurrentBufferIndex = 0;         // Current index in the 
 volatile bool deviceInputCurrentBufferFull = false;     // Flag to indicate if buffer has been filled at least once
 volatile float avgDeviceInputCurrent = 0.0f;            // Running average of device input current (from PMM_ISENSE)
 volatile int pmmZeroCurrentOffset = 0;                  // ADC value when no current is flowing
-volatile long pmmCalibrationSum = 0;                    // Sum of ADC samples during PMM current sensor calibration
-volatile float inputCurrentBufferSum = 0.0f;            // Sum of input current buffer values
+// volatile long pmmCalibrationSum = 0;                    // Sum of ADC samples during PMM current sensor calibration (FIXME why global?)
+// volatile float inputCurrentBufferSum = 0.0f;            // Sum of input current buffer values (FIXME why global?)
 
-// Fault Measurement Variables
-volatile double inputCurrentDuringFault = 0.0f;         // Input current reading during fault condition
-volatile double outputVoltageDuringFault = 0.0f;        // Output voltage reading during fault condition
-volatile double outputCurrentDuringFault = 0.0f;        // Output current reading during fault condition
+// Fault Measurement Variables (FIXME none of these are used)
+// volatile double inputCurrentDuringFault = 0.0f;         // Input current reading during fault condition
+// volatile double outputVoltageDuringFault = 0.0f;        // Output voltage reading during fault condition
+// volatile double outputCurrentDuringFault = 0.0f;        // Output current reading during fault condition
 
 // Output Current Sensor Calibration Variables
 volatile int outputCurrentSensorCalibrationSum = 0;     // Sum of ADC samples during output current sensor calibration
 volatile int outputCurrentSensorZeroCurrentOffset = 0;  // ADC value when no current is flowing through output current sensor
 
-// Edge Detection Mode Variables
-volatile uint32_t edgeDetectionWrapValue = 0;           // Wrap value for edge detection mode PWM
-volatile uint32_t edgeDetectionLevelValue = 0;          // Level value for edge detection mode PWM
+// Edge Detection Mode Variables (only edgeDetected is used)
+// volatile uint32_t edgeDetectionWrapValue = 0;           // Wrap value for edge detection mode PWM
+// volatile uint32_t edgeDetectionLevelValue = 0;          // Level value for edge detection mode PWM
 volatile bool edgeDetected = false;                     // Flag indicating if an edge has been detected in edge detection mode
 
 // Global PWM Output Configuration
 PWMOutput pwmOutputs[4];                                // Array to hold all PWM output configurations
 
 // PWM Setup Values
-volatile uint32_t pwmWrapValue = 0;                     // Wrap value for PWM configuration
-volatile uint32_t pwmLevelValue = 0;                    // Level value for PWM configuration
-volatile uint32_t pwmHighVoltageLevelValue = 0;         // Level value for high voltage phase PWM
+volatile uint32_t pwmWrapValue = 0;                     // Wrap value for PWM configuration (FIXME this is used in one function and never reference again--not a state variable)
+volatile uint32_t pwmLevelValue = 0;                    // Level value for PWM configuration (FIXME also used in one function--not a device state variable)
+volatile uint32_t pwmHighVoltageLevelValue = 0;         // Level value for high voltage phase PWM (FIXME ditto. why global!!?)
 
 // EDM Isofrequency Mode Settings
 volatile uint32_t EDMIsofrequencyModeWrapValue = 0;                     // Wrap value for EDM isofrequency mode PWM
@@ -425,7 +425,7 @@ void setupPowerManagementModule() {
     gpio_put(PMM_DIAG_EN, true);
 
     // Calibrate PMM current sensor before enabling power
-    pmmCalibrationSum = 0;
+    long pmmCalibrationSum = 0;
     for(int i = 0; i < PMM_CALIBRATION_SAMPLES; i++) {
         // Take reading and add to sum
         pmmCalibrationSum += analogRead(PMM_ISENSE);
@@ -512,27 +512,6 @@ void setupI2C() {
 
 // Function Definitions for void loop()
 //----------------------------------------------------
-void handleFault() {
-    // Function to handle faults for all fault types FaultStateType
-    switch (FaultStateType) {
-        case PMM_FAULT_TYPE:
-            // Handle PMM fault
-            handlePMMFault();
-            break;
-        case BUCK_CONVERTER_PGOOD_FAULT:
-            // Handle BUCK fault
-            handleHighCurrentPhaseFault();
-            break;
-        case BOOST_CONVERTER_PGOOD_FAULT:
-            // Handle BOOST fault
-            handleHighVoltagePhaseFault();
-            break;
-        case POWER_OUT_OF_RANGE_FAULT:
-            // Handle POWER_OUT_OF_RANGE fault
-            handlePowerOutOfRangeFault();
-            break;
-    }
-}
 void setEDMFeedbackDutyCycle(double dutyCycle) {
     // Clamp duty cycle between 0 and 1.00
     if (dutyCycle < 0.00) dutyCycle = 0.00;
@@ -616,7 +595,7 @@ void updateDeviceStatistics() {
     }
     // If the buffer is full, calculate the average device input current
     else {
-        inputCurrentBufferSum = 0.0f;
+        float inputCurrentBufferSum = 0.0f;
         for(int i = 0; i < DEVICE_CURRENT_BUFFER_SIZE; i++) {
             inputCurrentBufferSum += deviceInputCurrentBuffer[i];
         }
@@ -942,7 +921,7 @@ void READ_HVP_VOLTAGE() {
     float avg = sum / 10.0f;
     Serial.print("HVP_AVG_VOLTAGE ");
     Serial.println(avg, 3);
-}
+
 void updateBoostConverterDpotVoltageTable() {
     // Function to update the look up table for the boost converter digital potentiometer voltages
 
@@ -1643,7 +1622,24 @@ void loop() {
     currentTime_MS = millis();
     // If the device is in the FAULT state, run the fault handler function. It will act in accordance with the fault state type
     if (deviceState == FAULT) {
-        handleFault();
+      switch (FaultStateType) {
+          case PMM_FAULT_TYPE:
+              // Handle PMM fault
+              handlePMMFault();
+              break;
+          case BUCK_CONVERTER_PGOOD_FAULT:
+              // Handle BUCK fault
+              handleHighCurrentPhaseFault();
+              break;
+          case BOOST_CONVERTER_PGOOD_FAULT:
+              // Handle BOOST fault
+              handleHighVoltagePhaseFault();
+              break;
+          case POWER_OUT_OF_RANGE_FAULT:
+              // Handle POWER_OUT_OF_RANGE fault
+              handlePowerOutOfRangeFault();
+              break;
+      }
     }
     // Switch statement for device states of secondary priority
     switch (deviceState) {
