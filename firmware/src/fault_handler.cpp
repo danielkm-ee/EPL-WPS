@@ -1,4 +1,4 @@
-/* fault_handler.h
+/* fault_handler.cpp
  *
  * CONTENTS
  *     ISRs
