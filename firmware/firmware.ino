@@ -195,9 +195,8 @@ const bool dynamicFaultHandlingEnabled = true;          // If true, the device w
 volatile DeviceState deviceState = STARTUP;             // Current device state
 volatile DeviceState oldDeviceState = STARTUP;          // Previous device state, used for temporary state storage
 volatile ModeOfOperation modeOfOperation = EDM_ISOFREQUENCY_MODE;  // Current mode of operation
-volatile FaultStateType FaultStateType = PMM_FAULT_TYPE;// Current fault type
+volatile FaultStateType currentFaultType = PMM_FAULT_TYPE;  // Current fault type
 volatile bool modePreparationComplete = false;          // Flag to track if mode preparation is complete
-volatile bool isInFaultState = false;                   // Flag indicating if device is in fault state
 volatile bool enablePortStatus = false;                 // Status of the enable port
 
 // Timing Variables
@@ -608,7 +607,7 @@ void updateDeviceStatistics() {
         // Set the device state to FAULT
         deviceState = FAULT;
         // Set the fault type to POWER_OUT_OF_RANGE_FAULT
-        FaultStateType = POWER_OUT_OF_RANGE_FAULT;
+        currentFaultType = POWER_OUT_OF_RANGE_FAULT;
     }
 }
 void readEnablePort() {
@@ -657,7 +656,7 @@ void handlePMMFault() {
     // Change the device state to FAULT
     deviceState = FAULT;
     // Set the fault type
-    FaultStateType = PMM_FAULT_TYPE;
+    currentFaultType = PMM_FAULT_TYPE;
 
     // Write feedback port to 0% duty cycle
     setEDMFeedbackDutyCycle(0.00);
@@ -682,7 +681,7 @@ void handleHighCurrentPhaseFault() {
     disableOutputStage();
        
     // Set the fault type
-    FaultStateType = BUCK_CONVERTER_PGOOD_FAULT; 
+    currentFaultType = BUCK_CONVERTER_PGOOD_FAULT;
     // Set the device state to FAULT
     deviceState = FAULT;
 
@@ -704,25 +703,25 @@ void handleHighCurrentPhaseFault() {
 void handleHighVoltagePhaseFault() {
     // Function to handle BOOST faults
 
-    // Clear the GPIO interrupt status 
-    gpio_acknowledge_irq(BOOST_CONVERTER_PGOOD_FAULT, GPIO_IRQ_EDGE_FALL);
+    // Clear the GPIO interrupt status
+    gpio_acknowledge_irq(BOOST_PGOOD, GPIO_IRQ_EDGE_FALL);
     // Disable the output stage
     disableOutputStage();
 
     // Save the old device state
     oldDeviceState = deviceState;
     // Set the fault type
-    FaultStateType = BOOST_CONVERTER_PGOOD_FAULT;
+    currentFaultType = BOOST_CONVERTER_PGOOD_FAULT;
     // Set the device state to FAULT
     deviceState = FAULT;
 
     // Write feedback port to 0% duty cycle
     setEDMFeedbackDutyCycle(0.00);
-    // Turn off status LED 
+    // Turn off status LED
     gpio_put(STATUS_LED, false);
 
     // While the fault pin is LOW, do nothing
-    while (gpio_get(BOOST_CONVERTER_PGOOD_FAULT) == false) {
+    while (gpio_get(BOOST_PGOOD) == false) {
         // If serial is available, process commands
         if (Serial.available()) {
             String command = Serial.readStringUntil('\n');
@@ -739,13 +738,13 @@ void handleHighVoltagePhaseFault() {
 void handleHighVoltagePhaseSetupFault() {
     // Function to handle high voltage phase setup faults
 
-    // Clear the GPIO interrupt status 
-    gpio_acknowledge_irq(BOOST_CONVERTER_PGOOD_FAULT, GPIO_IRQ_EDGE_FALL);
+    // Clear the GPIO interrupt status
+    gpio_acknowledge_irq(BOOST_PGOOD, GPIO_IRQ_EDGE_FALL);
     // Disable the output stage
     disableOutputStage();
 
     // Set the fault type
-    FaultStateType = HIGH_VOLTAGE_PHASE_SETUP_FAULT;
+    currentFaultType = HIGH_VOLTAGE_PHASE_SETUP_FAULT;
     // Set the device state to FAULT
     deviceState = FAULT;
 
@@ -771,7 +770,7 @@ void handlePowerOutOfRangeFault() {
     disableOutputStage();
 
     // Set the fault type
-    FaultStateType = POWER_OUT_OF_RANGE_FAULT;
+    currentFaultType = POWER_OUT_OF_RANGE_FAULT;
     // Set the device state to FAULT
     deviceState = FAULT;
 
@@ -921,6 +920,7 @@ void READ_HVP_VOLTAGE() {
     float avg = sum / 10.0f;
     Serial.print("HVP_AVG_VOLTAGE ");
     Serial.println(avg, 3);
+}
 
 void updateBoostConverterDpotVoltageTable() {
     // Function to update the look up table for the boost converter digital potentiometer voltages
@@ -1067,7 +1067,7 @@ void setBoostConverterDPOTfromVoltageTable(int targetVoltage, int spacing_ms) {
 //----------------------------------------------------
 // Function to get fault type as string
 String getFaultType() {
-    switch (FaultStateType) {
+    switch (currentFaultType) {
         case PMM_FAULT_TYPE:
             return "PMM_FAULT";
         case BUCK_CONVERTER_PGOOD_FAULT:
@@ -1087,9 +1087,7 @@ void sendTelemetry() {
     Serial.println(SOFTWARE_VERSION);
     // Build fault string
     String faultStr = "NONE";
-    // if the device is in a fault state, build the fault string
-    if (isInFaultState) {
-        // Report the fault type
+    if (deviceState == FAULT) {
         faultStr = getFaultType();
     }
     // Print the device state
@@ -1622,7 +1620,7 @@ void loop() {
     currentTime_MS = millis();
     // If the device is in the FAULT state, run the fault handler function. It will act in accordance with the fault state type
     if (deviceState == FAULT) {
-      switch (FaultStateType) {
+      switch (currentFaultType) {
           case PMM_FAULT_TYPE:
               // Handle PMM fault
               handlePMMFault();
