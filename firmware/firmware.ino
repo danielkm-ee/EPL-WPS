@@ -15,7 +15,7 @@ const String SOFTWARE_VERSION = "1.1.0-beta";
 #include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
-#include <ctype.h> 
+#include <ctype.h>
 #include "pico/stdlib.h"
 #include "hardware/irq.h"
 #include "hardware/gpio.h"
@@ -24,180 +24,42 @@ const String SOFTWARE_VERSION = "1.1.0-beta";
 #include "hardware/pwm.h"
 #include "hardware/i2c.h"
 
-//=============================================================================
-// ENUMERATIONS
-//=============================================================================
-// Device States
-enum DeviceState {
-    STARTUP,                            // Device is in startup state
-    PERIPHERAL_MANAGEMENT,              // Device is in peripheral management state
-    FAULT,                              // Device is in fault state
-    OPERATING,                          // Device is in operating in a mode
-    IDLE                                // Device is in idle state
-};
-// Modes of Operation of device
-enum ModeOfOperation {
-    EDM_ISOFREQUENCY_MODE,              // EDM operating in isofrequency mode, where the frequency of discharges is fixed to the machining frequency
-    EDGE_DETECTION_MODE                 // Detect the edge of a conductive workpiece with a single pulse; report the edge via the EDM_FEEDBACK pin
-};
-
-// Fault State Types
-enum FaultStateType {
-    PMM_FAULT_TYPE,                     // Fault state due to the PMM current exceeding the maximum allowed current
-    BUCK_CONVERTER_PGOOD_FAULT,         // Fault state due to the buck converter PGOOD pin being low
-    BOOST_CONVERTER_PGOOD_FAULT,        // Fault state due to the boost converter PGOOD pin being low
-    POWER_OUT_OF_RANGE_FAULT,           // Fault state due to the power input exceeding the maximum allowed power
-    HIGH_VOLTAGE_PHASE_SETUP_FAULT      // Fault state due to the high voltage phase setup being incorrect
-};
+#include "config.h"
+#include "src/types.h"
 
 //=============================================================================
-// STRUCTURES
+// Unused / deprecated pins (kept for git-blame continuity; not wired)
 //=============================================================================
-// Command Parameter Types
-struct OutputParameters {
-    int dischargeCountTarget;
-    float dutyCycle;
-    float frequency;
-    float initVoltage;
-};
-
-// PWM Output Configuration Structure
-struct PWMOutput {
-    uint32_t slice;
-    uint32_t channel;
-};
+static const int BUCK_POWER_GOOD = 13;
+static const int BUCK_ENABLE     = 14;
+static const int BUCK_ADJ_PWM    = 15;
 
 //=============================================================================
-// PIN DEFINITIONS
-//=============================================================================
-// Digital Input/Output Pins
-const int EDM_ENABLE              =   2;                // Digital input
-const int EDM_FEEDBACK            =   3;                // PWM output for communicating with external motion controller. 
-                                                        // (0% duty cycle = at max power setpoint | Decrease motion feedrate, 100% duty cycle = no power consumption | Increase motion feedrate)
-
-const int OUTPUT_OVERCURRENT      =   12;               // Reports when detected current exceeds current limit threshold on output current sensor
-const int BUCK_POWER_GOOD         =   13;               // UNUSED
-const int BUCK_ENABLE             =   14;               // UNUSED
-const int BUCK_ADJ_PWM            =   15;               // UNUSED
-
-const int I2C_SDA_PIN             =   16;               // I2C data pin
-const int I2C_SCL_PIN             =   17;               // I2C clock pin
-
-const int BOOST_PGOOD             =   18;               // Reports when boost-converter module is providing power to system, active-LOW when fault is detected
-const int PMM_FAULT               =   20;               // Reports problems with power-management module, active-LOW when fault is detected
-const int PMM_DIAG_EN             =   21;               // Enables reporting of faults from power-management module
-const int PMM_ENABLE              =   22;               // Enables power-management module high-side switch, providing power to system
-const int STATUS_LED              =   25;               // Status LED on Pico
-
-// PWM Output Pins
-const int SW_HIGH_VOLTAGE_PHASE   =   8;                // PWM #4 Channel A, Switch for connecting high-voltage phase of dual-converter to output. Controlled by P-channel MOSFET (logic is inverted, HIGH = OFF LOW = ON)
-const int OUTPUT_OVERCURRENT_SET  =   9;                // PWM #4 Channel B, Sets current limit threshold using PWM, on output current sensor TMCS1133
-const int SW_ENABLE               =   10;               // PWM #5 Channel A, Switch for connecting output (-)-electrode to GROUND through output current sensor. Controlled by N-channel MOSFET (Logic is not inverted, HIGH = ON LOW = OFF)
-const int SW_HIGH_CURRENT_PHASE   =   11;               // PWM #5 Channel B, Switch for connecting high-current phase of dual-converter to output. Controlled by P-channel MOSFET (logic is inverted, HIGH = OFF LOW = ON)
-
-// Analog Input Pins
-const int PMM_ISENSE              =   26;               // Reports current from power-management module current sensor as analog voltage
-const int OUTPUT_VSENSE           =   27;               // Reports voltage from output voltage sensor as analog voltage
-const int OUTPUT_ISENSE           =   28;               // Reports current from output current sensor as analog voltage
-
-//=============================================================================
-// Variables
+// Runtime state
 //=============================================================================
 
-// Machining Parameters for EDM Isofrequency Mode
-volatile double machiningDutyCycle = 0.10f;             // Duty cycle for machining (0.0 to 1.0)
-volatile int machiningFrequency = 10000;                // Frequency in Hz
-volatile int machiningInitVoltage = 80;                 // Initiation voltage in volts
+// Machining parameters for EDM isofrequency mode
+volatile double machiningDutyCycle   = 0.10f;
+volatile int    machiningFrequency   = 10000;           // Hz
+volatile int    machiningInitVoltage = 80;              // V
 
-// Telemetry Flag
-const bool sendPeriodicTelemetryEnabled = true;             // If true, the device will send periodic telemetry over serial
+// Discharge-rate pulse-skipping
+volatile double maxDischargeSuccessRateThreshold = 0.800f;
+volatile int    dischargesPerCalculationInterval = 10;
 
-// Discharge Success Rate Pulse Skipping Feature
-const bool allowDischargeSuccessRatePulseSkipping = true;   // If true, the device will pulse skip if the discharge success rate exceeds the maximum discharge success rate threshold
-volatile double maxDischargeSuccessRateThreshold = 0.800f;  // Percentage of concurrent-discharges allowed before pulse skipping is triggered. Used to prevent short-circuiting.
-                                                            // Can range from 0.000 to 1.000.
-volatile int dischargesPerCalculationInterval = 10;         // Number of discharges per calculation interval for discharge success rate calculation
-
-// Power Setpoint Pulse Skipping
-const bool allowPowerSetpointPulseSkipping = true;          // If true, the device will pulse skip if the average input power exceeds the maximum input power setpoint
-const float MAX_INPUT_POWER_SETPOINT_WATTS = 75.0f;         // The maximum power consumption of the device, to prevent overheating. 
-                                                            // The EDM_FEEDBACK pin communicates power consumption to external motion controller via PWM signal
-                                                            // (0% duty cycle = at max power setpoint, decrease feedrate | 100% duty cycle = no power consumption, increase feedrate)
-
-// Boost Converter Module Globals 
-const int MIN_HIGH_VOLTAGE_PHASE_VOLTS = 64;            // Minimum safe high voltage phase voltage in volts
-const int MAX_HIGH_VOLTAGE_PHASE_VOLTS = 100;           // Maximum safe high voltage phase voltage in volts
-const int MIN_BOOST_CONVERTER_DPOT_POSITION = 0;        // Minimum position of the digital potentiometer on the boost converter module for safe operation
-const int MAX_BOOST_CONVERTER_DPOT_POSITION = 110;      // Maximum position of the digital potentiometer on the boost converter module for safe operation
-const int DEFAULT_BOOST_CONVERTER_DPOT_POSITION = 1;    // Default position of the digital potentiometer on the boost converter module
-const int BOOST_CONVERTER_RAMP_SPACING_MS = 10;         // Spacing between steps in the digital potentiometer, in milliseconds
-
-//  Parameter Limits
-const float MAX_SAFE_INPUT_CURRENT = 7.3f;                      // Maximum safe input current in amps
-const float MIN_DUTY_CYCLE = 0.01f;                             // Minimum duty cycle of machining
-const float MAX_DUTY_CYCLE = 0.12f;                             // Maximum duty cycle of machining
-const float MIN_MACHINING_FREQUENCY_HZ = 5000.0f;               // Minimum machining frequency in Hz
-const float MAX_MACHINING_FREQUENCY_HZ = 10000.0f;              // Maximum machining frequency in Hz
-const float MIN_ON_TIME_MICROS = 1.000f;                        // Minimum on-time in microseconds
-const float MAX_ON_TIME_MICROS = 25.000f;                       // Maximum on-time in microseconds
-const float MIN_OFF_TIME_MICROS = 88.000f;                      // Minimum off-time in microseconds
-const float MIN_INIT_VOLTAGE = MIN_HIGH_VOLTAGE_PHASE_VOLTS;    // Minimum initiation voltage (exclusive)
-const float MAX_INIT_VOLTAGE = MAX_HIGH_VOLTAGE_PHASE_VOLTS;    // Maximum initiation voltage in volts
-
-// Look up table for boost converter module digital potentiometer voltages
+// Boost-converter DPOT lookup table (volts at each position)
 volatile int dpotVoltageTable[MAX_BOOST_CONVERTER_DPOT_POSITION + 1];
 
-// I2C Configuration Constants
-#define I2C_PORT i2c0                                   // I2C port for the digital potentiometer
-#define DPOT_ADDR 0x3E                                  // Address of the digital potentiometer
-#define DPOT_REG 0x00                                   // Register address of the digital potentiometer
-#define I2C_BAUD_RATE_HZ 10000                          // Baud rate for I2C communication
+// Discharge-rate calc interval, derived from machining frequency
+volatile int dischargeRateCalculationInterval_MICROS = 0;
 
-// System Configuration Constants
-const int ADC_RESOLUTION_BITS = 12;                     // ADC resolution in bits (0-4095)
-const uint32_t PWM_BASE_CLOCK_FREQ = 133000000;         // Base clock frequency for PWM (133MHz)
-const int MAX_PARAMETERS = 4;                           // Maximum number of parameters for command processing
-volatile uint32_t edmFeedbackPwmFrequency_Hz = 1000;    // Frequency for EDM_FEEDBACK PWM in Hz (1000 Hz)
-const uint16_t EDM_FEEDBACK_PWM_CLOCK_DIVIDER = 10;     // Set to 10 to fit within uint8_t
-
-// Timing Constants
-const int PMM_INRUSH_DELAY_MS = 500;                    // Delay after enabling PMM to allow in-rush current to settle
-const unsigned long SERIAL_INIT_TIMEOUT_MS = 2000;      // Timeout duration for serial initialization (2 seconds)
-const int serialInitializationBlinkInterval_MS = 500;   // Interval for serial initialization (500 ms)
-const int periodicTelemetryInterval_MS = 1000;          // Interval for sending periodic telemetry (1000 ms)
-volatile int dischargeRateCalculationInterval_MICROS = 0;  // Interval for calculating discharge success rate (is calculated from machining frequency)
-
-// PMM_ISENSE Monitoring Constants
-const float ADC_TO_VOLTS = 3.3f / 4095.0f;             // Constant for converting 12-bit ADC into volts
-const float PMM_ISENSE_V_PER_AMP = 0.200f;             // 200 mV per amp for PMM current sensor
-const int DEVICE_CURRENT_BUFFER_SIZE = 100;            // Size of buffer for device current running average
-const int PMM_CALIBRATION_SAMPLES = 100;               // Number of samples to take for PMM current sensor calibration
-const int PMM_CALIBRATION_DELAY_MS = 1;                // Delay between PMM calibration samples in milliseconds
-
-// Output Current Sensor Constants
-const float ISENSE_OUTPUT_V_PER_AMP = 0.025f;                   // 25 mV per amp for output current sensor (TMCS1133C1A)
-const int ISENSE_OUTPUT_AMPS_PER_VOLT = 40;                     // 40 amps per volt for output current sensor (TMCS1133C1A)
-const float OUTPUT_CURRENT_ZERO_OFFSET = 0.33f;                 // Zero current offset of output current sensor (TMCS1133C1A), in volts (FIXME unused)
-const int DEFAULT_OUTPUT_CURRENT_THRESHOLD_A = 8;              
-const int OUTPUT_CURRENT_SENSOR_CALIBRATION_SAMPLES = 100;      // Number of samples to take for output current sensor calibration
-const int OUTPUT_CURRENT_SENSOR_CALIBRATION_DELAY_MS = 1;       // Delay between output current sensor calibration samples in milliseconds
-
-// Output Voltage Sensor Constants
-const float OUTPUT_VOLTAGE_SCALE = 0.08090972f;        // Pre-computed (3.3/4095) * 100.4 for output voltage scaling with 99.6:1 voltage divider
-
-// Fault Handling Configuration
-const bool PMM_FAULT_IN_USE = true;                     // Should always be true (FIXME then just use 'true' ?)
-const bool HIGH_CURRENT_PGOOD_IN_USE = false;           // Set to false if Pi-Filter module is used in high-current phase (FIXME just set flag to check for module type?)
-const bool HIGH_VOLTAGE_PGOOD_IN_USE = true;            // Set to true if boost-converter module is used in high-voltage phase (FIXME ditto)
-const bool dynamicFaultHandlingEnabled = true;          // If true, the device will dynamically handle faults based on the fault type (FIXME unused)
-
-// Device State Variables (FIXME make struct and typedef for these)
-volatile DeviceState deviceState = STARTUP;             // Current device state
-volatile DeviceState oldDeviceState = STARTUP;          // Previous device state, used for temporary state storage
-volatile ModeOfOperation modeOfOperation = EDM_ISOFREQUENCY_MODE;  // Current mode of operation
-volatile FaultStateType currentFaultType = PMM_FAULT_TYPE;  // Current fault type
-volatile bool modePreparationComplete = false;          // Flag to track if mode preparation is complete
-volatile bool enablePortStatus = false;                 // Status of the enable port
+// Device state
+volatile DeviceState     deviceState      = STARTUP;
+volatile DeviceState     oldDeviceState   = STARTUP;
+volatile ModeOfOperation modeOfOperation  = EDM_ISOFREQUENCY_MODE;
+volatile FaultStateType  currentFaultType = PMM_FAULT_TYPE;
+volatile bool modePreparationComplete = false;
+volatile bool enablePortStatus        = false;
 
 // Timing Variables
 volatile unsigned long currentTime_MS = 0;              // Current time in milliseconds
@@ -205,9 +67,6 @@ volatile unsigned long lastTelemetryEventTime_MS = 0;   // Time of last telemetr
 volatile unsigned long lastPeripheralManagementEventTime_MS = 0;  // Time of last peripheral management event
 volatile unsigned long inrushStartTime_MS = 0;          // Time when inrush started
 volatile unsigned long serialInitStartTime_MS = 0;      // Time when serial initialization started
-volatile int peripheralManagementInterval_MS = 10;      // Interval for peripheral management in milliseconds
-volatile int inrushDelay_MS = 500;                      // Delay for inrush in milliseconds
-
 // Discharge Control Variables
 volatile int dischargeCountTarget = 0;                  // Target count of discharges (0 for infinite, positive integer for finite)
 volatile int currentDischargeCount = 0;                 // Counter for number of discharges completed
@@ -438,7 +297,7 @@ void setupPowerManagementModule() {
     gpio_put(PMM_ENABLE, true);
     // Wait for in-rush current to settle with inrushDelayMs, inrushStartTime is set to currentTime
     inrushStartTime_MS = millis();
-    while (millis() - inrushStartTime_MS < inrushDelay_MS) {
+    while (millis() - inrushStartTime_MS < PMM_INRUSH_DELAY_MS) {
         // Do nothing
     }
 }
