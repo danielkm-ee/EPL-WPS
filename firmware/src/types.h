@@ -11,7 +11,6 @@
 // Device states.
 enum DeviceState {
     STARTUP,
-    PERIPHERAL_MANAGEMENT,
     FAULT,
     OPERATING,
     IDLE
@@ -26,7 +25,6 @@ enum ModeOfOperation {
 // Fault classifications.
 enum FaultStateType {
     PMM_FAULT_TYPE,
-    BUCK_CONVERTER_PGOOD_FAULT,
     BOOST_CONVERTER_PGOOD_FAULT,
     POWER_OUT_OF_RANGE_FAULT,
     HIGH_VOLTAGE_PHASE_SETUP_FAULT

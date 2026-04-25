@@ -99,6 +99,15 @@ static const float MAX_INIT_VOLTAGE           = MAX_HIGH_VOLTAGE_PHASE_VOLTS;
 
 static const int DEFAULT_OUTPUT_CURRENT_THRESHOLD_A = 8;
 
+// EDM iso-frequency: success-rate calculation window and pulse-skip threshold.
+static const int    DISCHARGES_PER_CALC_INTERVAL         = 10;
+static const double MAX_DISCHARGE_SUCCESS_RATE_THRESHOLD = 0.800;
+
+// EDM Iso-frequency mode: HV pulse on-time and PWM phase offset to prevent
+// shoot-through between SW_HIGH_VOLTAGE_PHASE and OUTPUT_OVERCURRENT_SET.
+static const int    EDM_ISOFREQ_HV_PULSE_ON_TIME_US = 1;
+static const double EDM_ISOFREQ_HV_PWM_OFFSET       = 0.25;
+
 //=============================================================================
 // Timing & feature flags (names preserved from firmware.ino)
 //=============================================================================
@@ -109,12 +118,6 @@ static const int  periodicTelemetryInterval_MS      = 1000;
 static const bool sendPeriodicTelemetryEnabled         = true;
 static const bool allowDischargeSuccessRatePulseSkipping = true;
 static const bool allowPowerSetpointPulseSkipping      = true;
-
-// Fault-source wiring. Kept as runtime-visible bools (rather than #ifdef)
-// because existing code checks them in if-statements.
-static const bool PMM_FAULT_IN_USE          = true;
-static const bool HIGH_CURRENT_PGOOD_IN_USE = false;
-static const bool HIGH_VOLTAGE_PGOOD_IN_USE = true;
 
 static const int MAX_PARAMETERS = 4;
 
