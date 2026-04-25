@@ -1,5 +1,8 @@
 # Setup
-If using the `arduino-cli`, this project requires Earle Phillhower's Arduino-Pico (RP2040) Core
+This project requires Earle Phillhower's Arduino-Pico (RP2040) Core
+If using the `arduino-cli`...
+
+Install the RP2040 Core
 ```bash
 arduino-cli config add board_manager.additional_urls https://github.com/earlephilhower/arduino-pico/releases/download/global/package_rp2040_index.json
 arduino-cli core update-index
