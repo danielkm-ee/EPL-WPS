@@ -47,6 +47,10 @@ volatile unsigned long lastDischargeSuccessRateCalculationTime = 0;
 // Edge-detection mode runtime.
 volatile bool edgeDetected = false;
 
+// Boost-converter dpot handle and calibration table.
+boost_dpot_t*    g_boost_dpot = nullptr;
+boost_cal_table_t g_boost_cal;
+
 // Periodic timing.
 static unsigned long lastTelemetryEventTime_MS            = 0;
 static unsigned long lastPeripheralManagementEventTime_MS = 0;
@@ -126,8 +130,9 @@ void setup(void) {
     attachInterrupt(digitalPinToInterrupt(OUTPUT_OVERCURRENT),
                     output_overcurrent_isr, FALLING);
 
-    boost_setup_i2c();
-    boost_build_voltage_table();
+    g_boost_dpot = boost_dpot_create(I2C_PORT, DPOT_ADDR, DPOT_REG);
+    boost_setup_i2c(g_boost_dpot, I2C_SDA_PIN, I2C_SCL_PIN, I2C_BAUD_RATE_HZ);
+    boost_cal_build(g_boost_dpot, &g_boost_cal, 8, 20);
 
     gpio_put(STATUS_LED, true);
     Serial.println("Setup complete");
@@ -297,7 +302,7 @@ static void setup_iso_output_pwm(double duty, int frequency_hz) {
     pwm_disable_output_stage();
     dischargeRateCalculationInterval_MICROS =
         (int)(DISCHARGES_PER_CALC_INTERVAL * (1000000 / frequency_hz));
-    boost_set_voltage(machiningInitVoltage, BOOST_CONVERTER_RAMP_SPACING_MS);
+    boost_set_voltage(g_boost_dpot, &g_boost_cal, machiningInitVoltage, BOOST_CONVERTER_RAMP_SPACING_MS);
     pwm_setup_output_stage(duty, frequency_hz, DEFAULT_OUTPUT_CURRENT_THRESHOLD_A,
                            true, true, true,
                            EDM_ISOFREQ_HV_PULSE_ON_TIME_US,
@@ -329,7 +334,7 @@ static void output_overcurrent_isr_edge(void) {
 }
 
 static void setup_edge_output_pwm(void) {
-    boost_set_voltage(MIN_HIGH_VOLTAGE_PHASE_VOLTS, BOOST_CONVERTER_RAMP_SPACING_MS);
+    boost_set_voltage(g_boost_dpot, &g_boost_cal, MIN_HIGH_VOLTAGE_PHASE_VOLTS, BOOST_CONVERTER_RAMP_SPACING_MS);
     pwm_setup_output_stage(0.05, 10000, DEFAULT_OUTPUT_CURRENT_THRESHOLD_A,
                            true, true, false,
                            1, 0.25);

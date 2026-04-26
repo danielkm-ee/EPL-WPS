@@ -32,6 +32,9 @@ extern volatile double avgDischargeVoltage;
 extern volatile double avgDischargeSuccessRate;
 extern volatile int    dischargesSinceOperationStarted;
 
+extern boost_dpot_t*    g_boost_dpot;
+extern boost_cal_table_t g_boost_cal;
+
 //-----------------------------------------------------------------------------
 // Serial setup
 //-----------------------------------------------------------------------------
@@ -246,19 +249,19 @@ void telemetry_process_command(String command) {
     }
     if (command.startsWith("SET_DPOT ")) {
         int p = command.substring(9).toInt();
-        boost_dpot_write(p);
+        boost_dpot_write_position(g_boost_dpot, p);
         Serial.print("DPOT set to: ");
         Serial.println(p);
         return;
     }
     if (command == "READ_HVP_VOLTAGE") {
-        int v = sensors_read_output_voltage_averaged(10);
+        float v = sensors_read_output_voltage_averaged(10);
         Serial.print("HVP_AVG_VOLTAGE ");
         Serial.println(v);
         return;
     }
     if (command == "UPDATE_DPOT_VOLTAGE_TABLE") {
-        boost_build_voltage_table();
+        boost_cal_build(g_boost_dpot, &g_boost_cal, 8, 20);
         return;
     }
     if (command.startsWith("SET_DPOT_FROM_VTABLE ")) {
@@ -270,7 +273,7 @@ void telemetry_process_command(String command) {
             Serial.print(MAX_HIGH_VOLTAGE_PHASE_VOLTS);
             Serial.println(" V)");
         } else {
-            boost_set_voltage(target, BOOST_CONVERTER_RAMP_SPACING_MS);
+            boost_set_voltage(g_boost_dpot, &g_boost_cal, (float)target, BOOST_CONVERTER_RAMP_SPACING_MS);
         }
         return;
     }
