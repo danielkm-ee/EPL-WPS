@@ -82,9 +82,8 @@ static const float INPUT_SUPPLY_VOLTAGE           = 48.0f;  // V (nominal)
 static const int MIN_HIGH_VOLTAGE_PHASE_VOLTS = 64;
 static const int MAX_HIGH_VOLTAGE_PHASE_VOLTS = 100;
 
-static const int MIN_BOOST_CONVERTER_DPOT_POSITION     = 0;
-static const int MAX_BOOST_CONVERTER_DPOT_POSITION     = 110;
-static const int DEFAULT_BOOST_CONVERTER_DPOT_POSITION = 1;
+static const int BOOST_DPOT_POSITION_MIN               = 0;
+static const int BOOST_DPOT_POSITION_MAX               = 110;
 static const int BOOST_CONVERTER_RAMP_SPACING_MS       = 10;
 
 static const float MIN_DUTY_CYCLE             = 0.01f;
