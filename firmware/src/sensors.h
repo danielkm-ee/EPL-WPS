@@ -27,6 +27,6 @@ double sensors_adc_to_discharge_current(int adc);
 double sensors_adc_to_discharge_voltage(int adc);
 
 // Averaged read of the boost-converter output voltage (V).
-int   sensors_read_output_voltage_averaged(int samples);
+float sensors_read_output_voltage_averaged(int samples);
 
 #endif // EPL_WPS_SENSORS_H
