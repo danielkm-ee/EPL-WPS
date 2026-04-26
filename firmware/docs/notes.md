@@ -1,4 +1,73 @@
-# Breaking up the WPS firmware to improve maintenence
+# Developing New Firmware for the WPS
+Author: github.com/danielkm-ee  
+
+The overall goal of this project is to provide some underlying code structure that will support future developments of the WPS (and potenitally the PowerCoreV3) firmware. I'm aiming to implement my own library for the WPS which is independant of the Arduino Platform used by the PowerCorev3 firmware, but is usable in any case. I do hope this work will be considered my own, as it will be a great deal of re-thinking and
+new developments based on my own skillsets in firmware development. I will be leaving the core functionality of the powercore firmware in the main program, refactoring as-needed for the new library implementation.  
+The library will be based on my own understanding of the WPS hardware and firmware experience.
+
+> This document is written from bottom to top: the most recent notes appear at the beginning of the file in hopes to prioritize the more recent progress and direction of this development process. You may need 
+to read this in "reverse" order for things to make sense.
+
+# Take 3: Developing a library for the wire supply
+## Implementation of the boost converter
+I've created a type for the boost converter module which stores the i2c config, and some state variables
+described below:
+| varname        | description            |
+|:---------------|:----------------------:|
+| `port`         | i2c port instance      |
+| `addr`         | 12c address of dpot    |
+| `reg`          | wiper register addr for dpot |
+| `position`     | current wiper position |
+| `write_status` | stores success/error information from the latest write operation |
+| `read_status`  | stores success/error information from the latest read  operation |
+
+I'm scrapping logic from the powercore firmware and developing my own system. The powercore firmware uses
+a static lookup table which it builds during the setup phase. This is good, but as the WPS heats up
+to operating temp, the sensor readings and output voltage will drift away from this initial calibration. I also realize, though, that to perform this calibration in an online fashion is less ideal while the power supply is in switching phases. It would be best to implement a calibration phase.
+It also needs to quantize the output voltage to some wiper position.
+
+This means I'll have to also restructure the ADCs in the sensor module.
+
+# Take 2: Inital naming conventions, functional breakdown, and refactoring
+One very difficult aspect of working with the current firmware is that it's very hard to tell where
+functionality is grouped up. I totally understand where this all comes from, the RackRobo team was
+on a time crunch and needed to develop some fast, working, firmware-- but this always leaves room for improvement in the implementation.
+
+## Coding Syle
+The current variable naming style is verbose, which is helpful for getting to know the *purpose* of any
+function, variable, or constant. I also like their indication of units where applicable. The issue I've
+had with the current naming scheme, however, is that it's unclear which variables are static constants 
+(like configuration parameters, pin names, timing intervals) and which variables are mutable.   
+
+I'll be using `snake_case` for mutable variables, keeping things short but descriptive, and
+using `SCREAMING_SNAKE_CASE` for constants and config parameters.
+
+## Naming conventions
+Some general rules I've set out for the library I'll be creating is that functions and types coming from a module identify their home by following a naming convention: `module_func_desc()`  
+Example:
+```c
+writeBoostConverterDpotPosition() --> boost_dpot_write_position()
+```
+> Here is an example where a `submodule` exists: `dpot`. This convention would be 
+> `module_submodule_func_desc()`
+
+This makes functions easy to locate, and functional groups easy to identify.
+
+## Using Claude Code for inital refactor and functional summary
+I've included the rules above in the CLAUDE.md, along with formatting for markdown filenames,
+using `kebab-case`. The intended workflow is as follows:
+1. Introduce claude to the repository and develop a functional description of the current firmware
+2. Strip down the current firmware: remove unused vars, unimplemented functions, complications in state machine
+3. Apply naming conventions described above to existing code
+4. Break up the firmware into functional groups -> into library stubs
+5. Write-up documentation for the firmware operation
+5. Handoff to me to implement a true library for the WPS.
+
+I'll be considering this first take more as a first-draft than a true `refactoring` of the code, as it
+will not be a true `library`. I'm re-inventing some of the core functionality and code structure myself.
+
+
+# Take 1: Breaking up the WPS firmware to improve maintenence
 Main goal: Break up the drivers for the various hardware devices
 	- Consider buck, boost, and output hardware as modules in software
 	- Separate state management, error handling, etc into main file
@@ -12,7 +81,7 @@ Pin assignments should be separated into a separate `config.h` file to make thin
 # Trademark Respects
 Another aim of my work on this repository is to pay respects to RackRobotics, Inc. trademarks and attribution.
 
-## Using AI to speed things up:
+# Using Gemini to speed up development
 Prompt:
 ```
  Hi, I am an undergraduate electrical engineering currently working on a CNC wire EDM for my capstone. We are using Linux CNC for the motion control systems with a Mesa 7i76eu as the step-level controller, and a raspberry pi as the Human Machine Interface. I've got a good deal of experience writing firmware in C and for arduino, and I've found a project for our power supply that could use some improvements to the firmware project. The main issue is that the firmware has been implemented as a single file, making maintenance difficult. I'd much rather have the functions separated into various `.h` and `.c` files that break functionality into sensor drivers, a config.h file, and other modular forms of the project. Could you take a look at this firmware and give me an example of how the firmware could be divided into these modular parts?
