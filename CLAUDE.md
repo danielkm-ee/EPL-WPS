@@ -24,3 +24,17 @@ Your primary task is to work as a coding agent, this is an embedded systems proj
 
 # Reporting
 Use `kebab-case` for markdown files
+
+# Compiling and Flashing
+This firmware may be flashed to the RP2040 using the Arduino IDE, or using the `arduino-cli`:
+
+To identify the correct port:
+```bash
+arduino-cli board list
+```
+
+Check for the port name, something like `/dev/ttyACM0` if on Linux. You may unplug the device and re-run the command to check it's the correct port. Then upload the firmware:
+```bash
+arduino-cli compile --fqbn rp2040:rp2040:rpipico ./firmware.ino                 # compiling
+arduino-cli upload -p <YOUR_PORT> --fqbn rp2040:rp2040:rpipico ./firmware.ino   # flashing
+```
