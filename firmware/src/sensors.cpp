@@ -1,6 +1,8 @@
 /* sensors.cpp */
 
 #include <Arduino.h>
+#include "pico/stdlib.h"
+#include "hardware/adc.h"
 #include "sensors.h"
 #include "../config.h"
 
@@ -12,6 +14,7 @@ static int   input_current_head  = 0;
 static int   input_current_count = 0;
 
 void sensors_setup_adc(void) {
+	adc_gpio_init(
     analogReadResolution(ADC_RESOLUTION_BITS);
 }
 
