@@ -44,10 +44,10 @@ void pwm_setup_output_stage(double machining_duty_cycle,
                             bool   high_voltage_phase,
                             int    hv_pulse_on_time_us,
                             double hv_pwm_offset) {
-    gpio_set_function(SW_HIGH_VOLTAGE_PHASE_PIN,  GPIO_FUNC_PWM);
-    gpio_set_function(SW_ENABLE_PIN,              GPIO_FUNC_PWM);
-    gpio_set_function(SW_HIGH_CURRENT_PHASE_PIN,  GPIO_FUNC_PWM);
-    gpio_set_function(OUTPUT_OVERCURRENT_SET_PIN, GPIO_FUNC_PWM);
+    gpio_set_function(SW_HIGH_VOLTAGE_PHASE,  GPIO_FUNC_PWM);
+    gpio_set_function(SW_ENABLE,              GPIO_FUNC_PWM);
+    gpio_set_function(SW_HIGH_CURRENT_PHASE,  GPIO_FUNC_PWM);
+    gpio_set_function(OUTPUT_OVERCURRENT_SET, GPIO_FUNC_PWM);
 
     // Phase-correct counter counts up+down so the period doubles; wrap is
     // therefore f_clk / (f_out * 2).
@@ -55,14 +55,14 @@ void pwm_setup_output_stage(double machining_duty_cycle,
     uint32_t level = (uint32_t)(wrap * machining_duty_cycle);
     uint32_t hv_level = (uint32_t)((PWM_BASE_CLOCK_FREQ * 0.5f) * (hv_pulse_on_time_us / 1000000.0f));
 
-    output_stage[0].slice   = pwm_gpio_to_slice_num(SW_ENABLE_PIN);
-    output_stage[0].channel = pwm_gpio_to_channel(SW_ENABLE_PIN);
-    output_stage[1].slice   = pwm_gpio_to_slice_num(SW_HIGH_CURRENT_PHASE_PIN);
-    output_stage[1].channel = pwm_gpio_to_channel(SW_HIGH_CURRENT_PHASE_PIN);
-    output_stage[2].slice   = pwm_gpio_to_slice_num(SW_HIGH_VOLTAGE_PHASE_PIN);
-    output_stage[2].channel = pwm_gpio_to_channel(SW_HIGH_VOLTAGE_PHASE_PIN);
-    output_stage[3].slice   = pwm_gpio_to_slice_num(OUTPUT_OVERCURRENT_SET_PIN);
-    output_stage[3].channel = pwm_gpio_to_channel(OUTPUT_OVERCURRENT_SET_PIN);
+    output_stage[0].slice   = pwm_gpio_to_slice_num(SW_ENABLE);
+    output_stage[0].channel = pwm_gpio_to_channel(SW_ENABLE);
+    output_stage[1].slice   = pwm_gpio_to_slice_num(SW_HIGH_CURRENT_PHASE);
+    output_stage[1].channel = pwm_gpio_to_channel(SW_HIGH_CURRENT_PHASE);
+    output_stage[2].slice   = pwm_gpio_to_slice_num(SW_HIGH_VOLTAGE_PHASE);
+    output_stage[2].channel = pwm_gpio_to_channel(SW_HIGH_VOLTAGE_PHASE);
+    output_stage[3].slice   = pwm_gpio_to_slice_num(OUTPUT_OVERCURRENT_SET);
+    output_stage[3].channel = pwm_gpio_to_channel(OUTPUT_OVERCURRENT_SET);
 
     // Invert the P-channel MOSFET drives. Slice 1 pairs N-ch SW_ENABLE with
     // P-ch SW_HIGH_CURRENT_PHASE; slice 2 pairs P-ch SW_HIGH_VOLTAGE_PHASE
@@ -100,12 +100,12 @@ void pwm_setup_output_stage(double machining_duty_cycle,
 }
 
 void pwm_disable_output_stage(void) {
-    pinMode(SW_ENABLE_PIN, OUTPUT);
-    gpio_put(SW_ENABLE_PIN, false);               // N-ch OFF = LOW
-    pinMode(SW_HIGH_CURRENT_PHASE_PIN, OUTPUT);
-    gpio_put(SW_HIGH_CURRENT_PHASE_PIN, true);    // P-ch OFF = HIGH
-    pinMode(SW_HIGH_VOLTAGE_PHASE_PIN, OUTPUT);
-    gpio_put(SW_HIGH_VOLTAGE_PHASE_PIN, true);    // P-ch OFF = HIGH
+    pinMode(SW_ENABLE, OUTPUT);
+    gpio_put(SW_ENABLE, false);               // N-ch OFF = LOW
+    pinMode(SW_HIGH_CURRENT_PHASE, OUTPUT);
+    gpio_put(SW_HIGH_CURRENT_PHASE, true);    // P-ch OFF = HIGH
+    pinMode(SW_HIGH_VOLTAGE_PHASE, OUTPUT);
+    gpio_put(SW_HIGH_VOLTAGE_PHASE, true);    // P-ch OFF = HIGH
 
     pwm_set_feedback_duty(0.0);
 }

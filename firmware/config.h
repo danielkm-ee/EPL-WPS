@@ -16,28 +16,28 @@
 // Pin assignments
 //=============================================================================
 // Digital I/O
-static const int EDM_ENABLE_PIN         = 2;    // Digital input from motion controller
-static const int EDM_FEEDBACK_PIN       = 3;    // PWM output to motion controller (power ratio)
-static const int OUTPUT_OVERCURRENT_PIN = 12;   // Active-LOW comparator from output current sensor
-static const int BOOST_PGOOD_PIN        = 18;   // Active-LOW power-good from boost-converter module
-static const int PMM_FAULT_PIN          = 20;   // Active-LOW fault from power-management module
-static const int PMM_DIAG_EN_PIN        = 21;   // Enables PMM fault reporting
-static const int PMM_ENABLE_PIN         = 22;   // PMM high-side switch enable
-static const int STATUS_LED_PIN         = 25;   // Onboard LED
+static const int EDM_ENABLE         = 2;    // Digital input from motion controller
+static const int EDM_FEEDBACK       = 3;    // PWM output to motion controller (power ratio)
+static const int OUTPUT_OVERCURRENT = 12;   // Active-LOW comparator from output current sensor
+static const int BOOST_PGOOD        = 18;   // Active-LOW power-good from boost-converter module
+static const int PMM_FAULT          = 20;   // Active-LOW fault from power-management module
+static const int PMM_DIAG_EN        = 21;   // Enables PMM fault reporting
+static const int PMM_ENABLE         = 22;   // PMM high-side switch enable
+static const int STATUS_LED         = 25;   // Onboard LED
 
 // Output-stage PWM.
 // SW_HIGH_VOLTAGE_PHASE shares its PWM slice with OUTPUT_OVERCURRENT_SET;
 // SW_ENABLE shares with SW_HIGH_CURRENT_PHASE. P-channel switches invert
 // polarity so HIGH = OFF.
-static const int SW_HIGH_VOLTAGE_PHASE_PIN  = 8;   // PWM 4A, P-channel (inverted)
-static const int OUTPUT_OVERCURRENT_SET_PIN = 9;   // PWM 4B
-static const int SW_ENABLE_PIN              = 10;  // PWM 5A, N-channel
-static const int SW_HIGH_CURRENT_PHASE_PIN  = 11;  // PWM 5B, P-channel (inverted)
+static const int SW_HIGH_VOLTAGE_PHASE  = 8;   // PWM 4A, P-channel (inverted)
+static const int OUTPUT_OVERCURRENT_SET = 9;   // PWM 4B
+static const int SW_ENABLE              = 10;  // PWM 5A, N-channel
+static const int SW_HIGH_CURRENT_PHASE  = 11;  // PWM 5B, P-channel (inverted)
 
 // Analog inputs
-static const int PMM_ISENSE_PIN    = 26;   // PMM current sensor (200 mV/A)
-static const int OUTPUT_VSENSE_PIN = 27;   // Output voltage via 99.6:1 divider
-static const int OUTPUT_ISENSE_PIN = 28;   // Output current sensor TMCS1133 (25 mV/A)
+static const int PMM_ISENSE    = 26;   // PMM current sensor (200 mV/A)
+static const int OUTPUT_VSENSE = 27;   // Output voltage via 99.6:1 divider
+static const int OUTPUT_ISENSE = 28;   // Output current sensor TMCS1133 (25 mV/A)
 
 // I2C (boost-converter DPOT)
 static const int I2C_SDA_PIN = 16;
