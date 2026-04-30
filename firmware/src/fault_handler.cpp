@@ -42,17 +42,17 @@ const char *fault_type_name(FaultStateType type) {
 // ISRs — thin. The heavy lifting runs in fault_handle() on the main loop.
 //-----------------------------------------------------------------------------
 static void isr_pmm(void) {
-    gpio_acknowledge_irq(PMM_FAULT, GPIO_IRQ_EDGE_FALL);
+    gpio_acknowledge_irq(PMM_FAULT_PIN, GPIO_IRQ_EDGE_FALL);
     fault_trip(PMM_FAULT_TYPE);
 }
 static void isr_boost(void) {
-    gpio_acknowledge_irq(BOOST_PGOOD, GPIO_IRQ_EDGE_FALL);
+    gpio_acknowledge_irq(BOOST_PGOOD_PIN, GPIO_IRQ_EDGE_FALL);
     fault_trip(BOOST_CONVERTER_PGOOD_FAULT);
 }
 
 void fault_attach_interrupts(void) {
-    attachInterrupt(digitalPinToInterrupt(PMM_FAULT),  isr_pmm,   FALLING);
-    attachInterrupt(digitalPinToInterrupt(BOOST_PGOOD), isr_boost, FALLING);
+    attachInterrupt(digitalPinToInterrupt(PMM_FAULT_PIN),  isr_pmm,   FALLING);
+    attachInterrupt(digitalPinToInterrupt(BOOST_PGOOD_PIN), isr_boost, FALLING);
     // OUTPUT_OVERCURRENT is wired by firmware.ino — it dispatches by mode.
     // The pi-filter HC module has no PGOOD line so there is no HC-PGOOD ISR.
 }
@@ -62,17 +62,17 @@ void fault_attach_interrupts(void) {
 // the rest, services serial commands until reset.
 //-----------------------------------------------------------------------------
 static void service_serial_until(bool (*recovered)(void)) {
-    gpio_put(STATUS_LED, false);
+    gpio_put(STATUS_LED_PIN, false);
     while (recovered == NULL || !recovered()) {
         if (Serial.available()) {
             String command = Serial.readStringUntil('\n');
             telemetry_process_command(command);
         }
     }
-    gpio_put(STATUS_LED, true);
+    gpio_put(STATUS_LED_PIN, true);
 }
 
-static bool boost_recovered(void) { return gpio_get(BOOST_PGOOD) != 0; }
+static bool boost_recovered(void) { return gpio_get(BOOST_PGOOD_PIN) != 0; }
 
 void fault_handle(void) {
     if (!pending) return;
@@ -87,9 +87,9 @@ void fault_handle(void) {
         case PMM_FAULT_TYPE:
             // The original behaviour was to block 500 ms then clear. We
             // preserve that so recovery telemetry stays stable.
-            gpio_put(STATUS_LED, false);
+            gpio_put(STATUS_LED_PIN, false);
             delay(500);
-            gpio_put(STATUS_LED, true);
+            gpio_put(STATUS_LED_PIN, true);
             Serial.println("PMM Fault Cleared");
             break;
         case BOOST_CONVERTER_PGOOD_FAULT:

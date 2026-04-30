@@ -14,21 +14,20 @@ static int   input_current_head  = 0;
 static int   input_current_count = 0;
 
 void sensors_setup_adc(void) {
-	adc_gpio_init(
     analogReadResolution(ADC_RESOLUTION_BITS);
 }
 
 void sensors_calibrate_input_current(void) {
     long sum = 0;
     for (int i = 0; i < PMM_CALIBRATION_SAMPLES; i++) {
-        sum += analogRead(PMM_ISENSE);
+        sum += analogRead(PMM_ISENSE_PIN);
         delay(PMM_CALIBRATION_DELAY_MS);
     }
     pmm_zero_offset = sum / PMM_CALIBRATION_SAMPLES;
 }
 
 void sensors_sample_input_current(void) {
-    float a = (analogRead(PMM_ISENSE) - pmm_zero_offset) * ADC_TO_VOLTS / PMM_ISENSE_V_PER_AMP;
+    float a = (analogRead(PMM_ISENSE_PIN) - pmm_zero_offset) * ADC_TO_VOLTS / PMM_ISENSE_V_PER_AMP;
     if (a < 0.0f) a = 0.0f;
     input_current_buf[input_current_head] = a;
     input_current_head = (input_current_head + 1) % DEVICE_CURRENT_BUFFER_SIZE;
@@ -47,7 +46,7 @@ float sensors_avg_input_current(void) {
 void sensors_calibrate_output_current(void) {
     long sum = 0;
     for (int i = 0; i < OUTPUT_CURRENT_SENSOR_CALIBRATION_SAMPLES; i++) {
-        sum += analogRead(OUTPUT_ISENSE);
+        sum += analogRead(OUTPUT_ISENSE_PIN);
         delay(OUTPUT_CURRENT_SENSOR_CALIBRATION_DELAY_MS);
     }
     output_current_offset = sum / OUTPUT_CURRENT_SENSOR_CALIBRATION_SAMPLES;
@@ -67,7 +66,7 @@ double sensors_adc_to_discharge_voltage(int adc) {
 float sensors_read_output_voltage_averaged(int samples) {
     float sum = 0.0f;
     for (int i = 0; i < samples; i++) {
-        sum += analogRead(OUTPUT_VSENSE) * OUTPUT_VOLTAGE_SCALE;
+        sum += analogRead(OUTPUT_VSENSE_PIN) * OUTPUT_VOLTAGE_SCALE;
     }
     return sum / samples;
 }

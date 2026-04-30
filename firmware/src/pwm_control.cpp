@@ -17,8 +17,8 @@ static PWMOutput feedback_pwm;
 static uint32_t  feedback_wrap = 0;
 
 void pwm_setup_feedback(void) {
-    feedback_pwm.slice   = pwm_gpio_to_slice_num(EDM_FEEDBACK);
-    feedback_pwm.channel = pwm_gpio_to_channel(EDM_FEEDBACK);
+    feedback_pwm.slice   = pwm_gpio_to_slice_num(EDM_FEEDBACK_PIN);
+    feedback_pwm.channel = pwm_gpio_to_channel(EDM_FEEDBACK_PIN);
 
     pwm_set_enabled(feedback_pwm.slice, false);
     feedback_wrap = PWM_BASE_CLOCK_FREQ

@@ -78,27 +78,27 @@ static void output_overcurrent_isr_edge(void);
 // PWM pin functions (SW_*, OUTPUT_OVERCURRENT_SET, EDM_FEEDBACK) are set by
 // pwm_setup_feedback() and pwm_setup_output_stage() — no need to set them here.
 static void setup_pin_modes(void) {
-    pinMode(EDM_ENABLE,         INPUT);
-    pinMode(OUTPUT_OVERCURRENT, INPUT);
-    pinMode(BOOST_PGOOD,        INPUT);
-    pinMode(PMM_FAULT,          INPUT);
-    pinMode(PMM_DIAG_EN,        OUTPUT);
-    pinMode(PMM_ENABLE,         OUTPUT);
-    pinMode(STATUS_LED,         OUTPUT);
+    pinMode(EDM_ENABLE_PIN,         INPUT);
+    pinMode(OUTPUT_OVERCURRENT_PIN, INPUT);
+    pinMode(BOOST_PGOOD_PIN,        INPUT);
+    pinMode(PMM_FAULT_PIN,          INPUT);
+    pinMode(PMM_DIAG_EN_PIN,        OUTPUT);
+    pinMode(PMM_ENABLE_PIN,         OUTPUT);
+    pinMode(STATUS_LED_PIN,         OUTPUT);
 
-    pinMode(PMM_ISENSE,    INPUT);
-    pinMode(OUTPUT_VSENSE, INPUT);
-    pinMode(OUTPUT_ISENSE, INPUT);
+    pinMode(PMM_ISENSE_PIN,    INPUT);
+    pinMode(OUTPUT_VSENSE_PIN, INPUT);
+    pinMode(OUTPUT_ISENSE_PIN, INPUT);
 }
 
 static void setup_initial_pin_states(void) {
-    gpio_put(PMM_ENABLE,  false);
-    gpio_put(PMM_DIAG_EN, true);
+    gpio_put(PMM_ENABLE_PIN,  false);
+    gpio_put(PMM_DIAG_EN_PIN, true);
 }
 
 // PMM high-side switch on; spin until inrush settles.
 static void enable_pmm_and_wait_inrush(void) {
-    gpio_put(PMM_ENABLE, true);
+    gpio_put(PMM_ENABLE_PIN, true);
     unsigned long start = millis();
     while (millis() - start < PMM_INRUSH_DELAY_MS) {
         // Inrush settling.
@@ -127,22 +127,24 @@ void setup(void) {
     Serial.println(SOFTWARE_VERSION);
 
     fault_attach_interrupts();
-    attachInterrupt(digitalPinToInterrupt(OUTPUT_OVERCURRENT),
+    attachInterrupt(digitalPinToInterrupt(OUTPUT_OVERCURRENT_PIN),
                     output_overcurrent_isr, FALLING);
 
     // setup output stage to hold HVP voltage level
+    Serial.println("Setting output stage to hold HVP Voltage Level...");
     pwm_setup_output_stage(0.00f, 10000, DEFAULT_OUTPUT_CURRENT_THRESHOLD_A,
                            false, false, true,
                            EDM_ISOFREQ_HV_PULSE_ON_TIME_US,
                            EDM_ISOFREQ_HV_PWM_OFFSET);
     // build boost converter voltage table
+    Serial.println("Building Boost Converter DPOT Voltage table...");
     g_boost_dpot = boost_dpot_create(I2C_PORT, DPOT_ADDR, DPOT_REG);
     boost_setup_i2c(g_boost_dpot, I2C_SDA_PIN, I2C_SCL_PIN, I2C_BAUD_RATE_HZ);
     boost_cal_build(g_boost_dpot, &g_boost_cal, 8, 20);
     // disable output stage until machining mode occurs
-    pwm_disable_output_stage()
+    pwm_disable_output_stage();
 
-    gpio_put(STATUS_LED, true);
+    gpio_put(STATUS_LED_PIN, true);
     Serial.println("Setup complete");
     deviceState = IDLE;
 }
@@ -181,7 +183,7 @@ static void handle_peripheral_management(void) {
     sensors_sample_input_current();
     update_device_statistics();
 
-    deviceState = digitalRead(EDM_ENABLE) ? OPERATING : IDLE;
+    deviceState = digitalRead(EDM_ENABLE_PIN) ? OPERATING : IDLE;
 
     if (deviceState == OPERATING) {
         float power_w = sensors_avg_input_current() * INPUT_SUPPLY_VOLTAGE;
@@ -298,12 +300,12 @@ static void edm_isofreq_mode(void) {
 }
 
 static void output_overcurrent_isr_iso(void) {
-    newDischargeCurrent_ADC = analogRead(OUTPUT_ISENSE);
-    newDischargeVoltage_ADC = analogRead(OUTPUT_VSENSE);
+    newDischargeCurrent_ADC = analogRead(OUTPUT_ISENSE_PIN);
+    newDischargeVoltage_ADC = analogRead(OUTPUT_VSENSE_PIN);
     dischargesSinceOperationStarted++;
     currentDischargeCount++;
     newDischargeDetected = true;
-    gpio_acknowledge_irq(OUTPUT_OVERCURRENT, GPIO_IRQ_EDGE_FALL);
+    gpio_acknowledge_irq(OUTPUT_OVERCURRENT_PIN, GPIO_IRQ_EDGE_FALL);
 }
 
 static void setup_iso_output_pwm(double duty, int frequency_hz) {
@@ -331,7 +333,7 @@ static void edge_detection_mode(void) {
 static void output_overcurrent_isr_edge(void) {
     if (edgeDetected) return;
     edgeDetected = true;
-    gpio_acknowledge_irq(OUTPUT_OVERCURRENT, GPIO_IRQ_EDGE_FALL);
+    gpio_acknowledge_irq(OUTPUT_OVERCURRENT_PIN, GPIO_IRQ_EDGE_FALL);
     pwm_disable_output_stage();
     pwm_set_feedback_duty(1.0);
     Serial.println("EDGE DETECTED");
