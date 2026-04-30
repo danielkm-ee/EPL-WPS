@@ -130,9 +130,17 @@ void setup(void) {
     attachInterrupt(digitalPinToInterrupt(OUTPUT_OVERCURRENT),
                     output_overcurrent_isr, FALLING);
 
+    // setup output stage to hold HVP voltage level
+    pwm_setup_output_stage(0.00f, 10000, DEFAULT_OUTPUT_CURRENT_THRESHOLD_A,
+                           false, false, true,
+                           EDM_ISOFREQ_HV_PULSE_ON_TIME_US,
+                           EDM_ISOFREQ_HV_PWM_OFFSET);
+    // build boost converter voltage table
     g_boost_dpot = boost_dpot_create(I2C_PORT, DPOT_ADDR, DPOT_REG);
     boost_setup_i2c(g_boost_dpot, I2C_SDA_PIN, I2C_SCL_PIN, I2C_BAUD_RATE_HZ);
     boost_cal_build(g_boost_dpot, &g_boost_cal, 8, 20);
+    // disable output stage until machining mode occurs
+    pwm_disable_output_stage()
 
     gpio_put(STATUS_LED, true);
     Serial.println("Setup complete");
