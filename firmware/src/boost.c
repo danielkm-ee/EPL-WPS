@@ -1,4 +1,4 @@
-/* boost_module.cpp */
+/* boost.c */
 
 #include <math.h>
 #include <stdlib.h>
@@ -8,7 +8,7 @@
 #include "pico/stdlib.h"
 #include "pico/time.h"
 
-#include "boost_module.h"
+#include "boost.h"
 #include "sensors.h"
 #include "../config.h"
 
@@ -96,7 +96,7 @@ boost_cal_status_t boost_cal_build(boost_dpot_t* dpot, boost_cal_table_t* tbl,
 }
 
 uint8_t boost_cal_lookup_wiper(const boost_cal_table_t* tbl, float target_v) {
-    // searches cal table for nearest voltage value and returns the associated wiper pos.
+    /* searches cal table for nearest voltage value and returns the associated wiper pos. */
     if (!tbl || !tbl->calibrated || tbl->count == 0) return BOOST_DPOT_POSITION_MIN;
 
     int lo = 0, hi = (int)tbl->count - 1;
