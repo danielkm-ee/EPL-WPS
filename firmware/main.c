@@ -95,6 +95,11 @@ static void verify_boost_cal_safe(void)
                (double)max_v, MAX_HIGH_VOLTAGE_PHASE_VOLTS);
         fault_trip(HIGH_VOLTAGE_PHASE_SETUP_FAULT);
     }
+    if (max_v < (float)MIN_HIGH_VOLTAGE_PHASE_VOLTS) {
+        printf("ERROR: boost cal max voltage %.2f V lower than minimum %d V\n",
+               (double)max_v, MIN_HIGH_VOLTAGE_PHASE_VOLTS);
+        fault_trip(HIGH_VOLTAGE_PHASE_SETUP_FAULT);
+    }
 }
 
 /* --- Mode preparation (OPERATING entry) ----------------------------- */
@@ -153,7 +158,7 @@ int main(void)
 
     /* 2. USB-CDC up first so the rest of boot can log. */
     cmd_init();
-    printf("Software Version: %s\n", "1.0-beta");
+    printf("Software Version: %s\n", "rev0");
 
     /* 3. STATUS LED off until boot completes. */
     status_led_init();

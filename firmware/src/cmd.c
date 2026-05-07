@@ -25,7 +25,7 @@
 #include "boost.h"
 #include "../config.h"
 
-#define SOFTWARE_VERSION    "1.0-beta"
+#define FIRMWARE_VERSION    "rev0"
 #define CMD_LINE_BUFFER_SZ  128
 #define CMD_MAX_TOKENS      (MAX_CMD_PARAMS + 1)   /* name + up to MAX_CMD_PARAMS args */
 #define CMD_USB_ENUM_MS     1000
@@ -252,7 +252,7 @@ static const char *device_state_name(device_state_t s)
 
 void cmd_send_telemetry(const main_ctx_t *ctx)
 {
-    printf("FIRMWARE_VERSION %s\n", SOFTWARE_VERSION);
+    printf("FIRMWARE_VERSION %s\n", FIRMWARE_VERSION);
     printf("STATE %s\n", device_state_name(ctx->state));
     if (ctx->state == FAULT) {
         printf("FAULT %s\n", fault_type_name(fault_active_type()));

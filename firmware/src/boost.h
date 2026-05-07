@@ -20,7 +20,6 @@ extern "C" {
 
 typedef enum {
     BOOST_CAL_OK,
-    BOOST_CAL_TIMEOUT,
     BOOST_CAL_INVALID_INPUT,
 } boost_cal_status_t;
 
