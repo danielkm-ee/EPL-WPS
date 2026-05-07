@@ -60,6 +60,7 @@ static void cmd_print_listing(void);
 static void cmd_dispatch(int argc, char **argv, main_ctx_t *ctx);
 
 static void cmd_handle_send_telemetry           (int argc, char **argv, main_ctx_t *ctx);
+static void cmd_handle_set_telemetry            (int argc, char **argv, main_ctx_t *ctx);
 static void cmd_handle_set_all_parameters       (int argc, char **argv, main_ctx_t *ctx);
 static void cmd_handle_edge_detection_mode      (int argc, char **argv, main_ctx_t *ctx);
 static void cmd_handle_edm_isofrequency_mode    (int argc, char **argv, main_ctx_t *ctx);
@@ -77,6 +78,10 @@ static const cmd_entry_t g_cmd_table[] = {
     { "SEND_TELEMETRY",            0, 0, cmd_handle_send_telemetry,
       "SEND_TELEMETRY",
       "Print the current device status block." },
+
+    { "SET_TELEMETRY",             1, 1, cmd_handle_set_telemetry,
+      "SET_TELEMETRY <on/off>",
+      "Enable or disable telemetry updates." },
 
     { "SET_ALL_PARAMETERS",        4, 4, cmd_handle_set_all_parameters,
       "SET_ALL_PARAMETERS <discharges> <duty> <freq_hz> <init_v>",
@@ -350,6 +355,18 @@ static void cmd_handle_send_telemetry(int argc, char **argv, main_ctx_t *ctx)
 {
     (void)argc; (void)argv;
     cmd_send_telemetry(ctx);
+}
+
+static void cmd_handle_set_telemetry(int argc, char **argv, main_ctx_t *ctx)
+{
+    (void)argc;
+    if (strcmp(argv[1], "on") == 0 || strcmp(argv[1], "ON") == 0) {
+        ctx->periodic_telemetry_enabled = true;
+        printf("OK: Periodic telemetry ON\n");
+    } else {
+        ctx->periodic_telemetry_enabled = false;
+        printf("OK: Periodic telemetry OFF\n");
+    }
 }
 
 static void cmd_handle_set_all_parameters(int argc, char **argv, main_ctx_t *ctx)
