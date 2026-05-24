@@ -63,7 +63,7 @@ The Powercore is a two-phase EDM power supply:
 - **High-voltage phase** ignites the discharge across the wire/workpiece gap. A boost-converter module produces 64–100 V DC, set by a TPL0401B digital potentiometer over I2C.
 - **High-current phase** delivers the bulk discharge energy through a pi-filter module. There is no programmable rail here — the filter draws from the 48 V input.
 - Four MOSFETs (`SW_ENABLE_PIN`, `SW_HIGH_CURRENT_PHASE_PIN`, `SW_HIGH_VOLTAGE_PHASE_PIN`, plus the comparator-fed `OUTPUT_OVERCURRENT_SET_PIN`) are gated by RP2040 PWM. `SW_HIGH_VOLTAGE_PHASE_PIN` and `SW_HIGH_CURRENT_PHASE_PIN` are P-channel and therefore inverted; `SW_ENABLE_PIN` is N-channel.
-- A motion controller (typically LinuxCNC) toggles `EDM_ENABLE_PIN` to request machining and reads back a power-ratio signal on `EDM_FEEDBACK_PIN`, encoded as PWM frequency at a fixed duty cycle (configurable range, default 50–500 Hz).
+- A motion controller (typically LinuxCNC) toggles `EDM_ENABLE_PIN` to request machining and reads back a power-ratio signal on `EDM_FEEDBACK_PIN`, encoded as PWM frequency at a fixed 50% duty cycle (default 200–400 Hz; see `docs/freq-encoding.md`).
 - Three ADC channels: `PMM_ISENSE_PIN` (input current, 200 mV/A), `OUTPUT_VSENSE_PIN` (output voltage via 99.6:1 divider), `OUTPUT_ISENSE_PIN` (output current, TMCS1133 25 mV/A).
 - Three fault sources: `PMM_FAULT_PIN` (active-low), `BOOST_PGOOD_PIN` (active-low), `OUTPUT_OVERCURRENT_PIN` (comparator, falling edge).
 

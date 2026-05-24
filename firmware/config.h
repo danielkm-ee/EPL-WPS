@@ -63,12 +63,14 @@ static const int      ADC_RESOLUTION_BITS = 12;
 static const uint32_t PWM_BASE_CLOCK_FREQ = 133000000;  /* 133 MHz */
 
 /* EDM_FEEDBACK encodes input-power ratio as PWM frequency at a fixed
- * 50% duty cycle. Divider 64 keeps wrap inside 16 bits at MIN freq
- * (133 MHz / 64 / 50 Hz ≈ 41562 < 65535). */
+ * 50% duty cycle. Range is narrow on purpose: at MIN the period
+ * (5 ms) is shorter than the 10 ms firmware update interval, so the
+ * host sees at least two full cycles between updates - resolution
+ * traded for responsiveness. See docs/freq-encoding.md. */
 static const uint16_t EDM_FEEDBACK_PWM_CLOCK_DIVIDER = 64;
 static const float    EDM_FEEDBACK_PWM_DUTY          = 0.5f;
-static const uint32_t EDM_FEEDBACK_FREQ_MIN_HZ       = 50;
-static const uint32_t EDM_FEEDBACK_FREQ_MAX_HZ       = 500;
+static const uint32_t EDM_FEEDBACK_FREQ_MIN_HZ       = 200;
+static const uint32_t EDM_FEEDBACK_FREQ_MAX_HZ       = 400;
 
 /*=============================================================================
  * Sensor scaling
