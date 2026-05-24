@@ -34,8 +34,9 @@ extern "C" {
 /* --- Lifecycle ------------------------------------------------------- */
 
 /* Cache PWM slice/channel mappings, configure the EDM_FEEDBACK PWM
- * (1 kHz, active-low), and force the four output switches into safe-OFF
- * GPIO state. Call once at boot, before any setup_* call. */
+ * clock divider (PWM left disabled, off by default), and force the four
+ * output switches into safe-OFF GPIO state. Call once at boot, before
+ * any setup_* call. */
 void output_init(void);
 
 /* Bind the runtime context for use by output_overcurrent_isr() and arm
@@ -52,9 +53,17 @@ void output_overcurrent_isr(void);
 
 /* --- Feedback PWM ---------------------------------------------------- */
 
-/* Update the EDM_FEEDBACK duty (active-low: 0.0 = full power, 1.0 = no
- * load). Clamped to [0,1]. */
-void output_feedback_set_duty(float duty);
+/* Encode the input-power ratio onto EDM_FEEDBACK as PWM frequency at a
+ * fixed EDM_FEEDBACK_PWM_DUTY. ratio is clamped to [0,1] and mapped
+ * linearly across [EDM_FEEDBACK_FREQ_MIN_HZ, EDM_FEEDBACK_FREQ_MAX_HZ]
+ * so MAX freq = full power, MIN freq = no power. Enables the slice if
+ * it was disabled. */
+void output_feedback_set_ratio(float ratio);
+
+/* Stop the EDM_FEEDBACK PWM so the line idles low. Used by edge-mode
+ * signaling to produce the silent half of the "tone burst then off"
+ * protocol. */
+void output_feedback_disable(void);
 
 /* --- Output stage configuration ------------------------------------- */
 
@@ -75,8 +84,8 @@ void output_stage_setup(float duty_cycle, int frequency_hz,
                         float hv_pulse_us, float hv_offset);
 
 /* Force the four output switches into safe-OFF state by reclaiming the
- * pads as SIO outputs. Does NOT change the EDM_FEEDBACK duty — callers
- * that want feedback off must call output_feedback_set_duty(0). */
+ * pads as SIO outputs. Does NOT touch the EDM_FEEDBACK PWM — callers
+ * that want feedback off must call output_feedback_disable(). */
 void output_stage_disable(void);
 
 /* High-level: configure for EDM iso-frequency mode using ctx->params.

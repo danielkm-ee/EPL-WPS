@@ -32,7 +32,6 @@ static pwm_output_t g_sw_hc;
 static pwm_output_t g_sw_hv;
 static pwm_output_t g_oc_set;
 static pwm_output_t g_feedback;
-static uint32_t     g_feedback_wrap = 0;
 
 /* --- Internal helpers ------------------------------------------------ */
 
@@ -64,15 +63,14 @@ void output_init(void)
 {
     output_cache_pwm_descriptors();
 
-    /* EDM_FEEDBACK: 1 kHz active-low PWM, runs continuously. */
+    /* EDM_FEEDBACK: power ratio encoded as PWM frequency. Configure the
+     * clock divider here; output_feedback_set_ratio() programs wrap/
+     * level on demand. Leave the slice disabled so the line stays low
+     * until something asks for a ratio. */
     gpio_set_function(EDM_FEEDBACK_PIN, GPIO_FUNC_PWM);
     pwm_set_enabled(g_feedback.slice, false);
-    g_feedback_wrap = PWM_BASE_CLOCK_FREQ
-                      / (EDM_FEEDBACK_PWM_FREQ_HZ * EDM_FEEDBACK_PWM_CLOCK_DIVIDER);
-    pwm_set_wrap(g_feedback.slice, g_feedback_wrap);
     pwm_set_clkdiv_int_frac(g_feedback.slice, EDM_FEEDBACK_PWM_CLOCK_DIVIDER, 0);
     pwm_set_chan_level(g_feedback.slice, g_feedback.channel, 0);
-    pwm_set_enabled(g_feedback.slice, true);
 
     /* Output switches: safe-OFF before the PWM peripheral ever owns the
      * pads. */
@@ -109,12 +107,27 @@ void output_overcurrent_isr(void)
 
 /* --- Feedback PWM ---------------------------------------------------- */
 
-void output_feedback_set_duty(float duty)
+void output_feedback_set_ratio(float ratio)
 {
-    if (duty < 0.0f) duty = 0.0f;
-    if (duty > 1.0f) duty = 1.0f;
-    uint32_t level = (uint32_t)(g_feedback_wrap * duty);
-    pwm_set_chan_level(g_feedback.slice, g_feedback.channel, level);
+    if (ratio < 0.0f) ratio = 0.0f;
+    if (ratio > 1.0f) ratio = 1.0f;
+
+    float    freq_hz = (float)EDM_FEEDBACK_FREQ_MIN_HZ
+                       + ratio * (float)(EDM_FEEDBACK_FREQ_MAX_HZ
+                                         - EDM_FEEDBACK_FREQ_MIN_HZ);
+    uint32_t wrap    = PWM_BASE_CLOCK_FREQ
+                       / ((uint32_t)freq_hz * EDM_FEEDBACK_PWM_CLOCK_DIVIDER);
+    uint32_t level   = (uint32_t)((float)wrap * EDM_FEEDBACK_PWM_DUTY);
+
+    pwm_set_wrap(g_feedback.slice, (uint16_t)wrap);
+    pwm_set_chan_level(g_feedback.slice, g_feedback.channel, (uint16_t)level);
+    pwm_set_enabled(g_feedback.slice, true);
+}
+
+void output_feedback_disable(void)
+{
+    pwm_set_enabled(g_feedback.slice, false);
+    pwm_set_chan_level(g_feedback.slice, g_feedback.channel, 0);
 }
 
 /* --- Output stage configuration ------------------------------------- */
@@ -257,7 +270,7 @@ void output_run_isofreq(main_ctx_t *ctx)
                    ctx->discharges_since_op_start);
             output_stage_disable();
         }
-        output_feedback_set_duty(0.0f);
+        output_feedback_set_ratio(0.0f);
         ctx->requested_discharges_reached = true;
         return;
     }
@@ -307,13 +320,14 @@ void output_run_edge(main_ctx_t *ctx)
     if (!ctx || !ctx->edge_detected) return;
 
     /* ISR has already disabled the output stage; drive the protocol
-     * sequence to the motion controller, then clear the latch. The
-     * output stays disabled until handle_idle_state in main.c clears
-     * mode_prep_done and re-runs setup. */
-    output_feedback_set_duty(1.0f);
+     * sequence to the motion controller — MAX-freq tone for 1 s, then
+     * PWM off for 1 s — then clear the latch. The output stays disabled
+     * until handle_idle_state in main.c clears mode_prep_done and
+     * re-runs setup. */
+    output_feedback_set_ratio(1.0f);
     printf("EDGE DETECTED\n");
     sleep_ms(1000);
-    output_feedback_set_duty(0.0f);
+    output_feedback_disable();
     sleep_ms(1000);
     ctx->edge_detected = false;
 }

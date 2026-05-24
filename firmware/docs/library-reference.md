@@ -281,7 +281,7 @@ Drives five PWM channels across three slices:
 | `OUTPUT_OVERCURRENT_SET_PIN` (9) | 4B | normal          | Comparator threshold (PWM-as-DAC) |
 | `SW_ENABLE_PIN` (10)             | 5A | normal (N-ch)   | Output stage enable |
 | `SW_HIGH_CURRENT_PHASE_PIN` (11) | 5B | inverted (P-ch) | HC pulse switch |
-| `EDM_FEEDBACK_PIN` (3)           | 1B | normal          | Power-ratio out to motion controller |
+| `EDM_FEEDBACK_PIN` (3)           | 1B | normal          | Power-ratio out to motion controller (frequency-encoded) |
 
 ```c
 /* Lifecycle */
@@ -289,8 +289,10 @@ void output_init(void);
 void output_attach_isr(main_ctx_t *ctx);
 void output_overcurrent_isr(void);              /* called only by main.c dispatch */
 
-/* Feedback PWM (motion-controller signal) */
-void output_feedback_set_duty(float duty);
+/* Feedback PWM (motion-controller signal): power ratio is encoded as
+ * PWM frequency at a fixed duty (EDM_FEEDBACK_PWM_DUTY). */
+void output_feedback_set_ratio(float ratio);   /* 0..1 -> MIN..MAX freq */
+void output_feedback_disable(void);            /* PWM off, line low */
 
 /* Output stage */
 void output_stage_setup(float duty, int freq_hz, float oc_threshold_a,
@@ -447,7 +449,7 @@ Dispatch rules:
 | `READ_HVP_VOLTAGE` | 10-sample averaged HV-rail read. |
 | `UPDATE_DPOT_VOLTAGE_TABLE` | Re-run the boost cal sweep. |
 | `SET_DPOT_FROM_VTABLE <volts>` | Ramp DPOT to closest table entry. |
-| `SET_FEEDBACK_DUTY <0..1>` | Override the EDM_FEEDBACK PWM duty (debug). |
+| `SET_FEEDBACK_RATIO <0..1>` | Override the EDM_FEEDBACK power ratio (encoded as PWM frequency) (debug). |
 | `HELP [<command>]` | List all commands, or print full usage for one. |
 
 Validation in `apply_parameters()` is the only path through which the
@@ -595,9 +597,10 @@ automatically; ISRs do not need to call `gpio_acknowledge_irq`.
 
 - Drains `ctx->edge_detected` (latched by the ISR with the output
   already disabled).
-- Drives feedback to 1.0 for 1 s, then back to 0.0 for 1 s, then
-  clears the flag. After detection the output stays disabled until the
-  device cycles through IDLE.
+- Drives feedback to `EDM_FEEDBACK_FREQ_MAX_HZ` (tone burst) for 1 s,
+  then disables the feedback PWM (silence) for 1 s, then clears the
+  flag. After detection the output stays disabled until the device
+  cycles through IDLE.
 
 ---
 

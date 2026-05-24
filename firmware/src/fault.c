@@ -106,7 +106,7 @@ void fault_handle(main_ctx_t *ctx, bool (*cmd_poll_fn)(main_ctx_t *))
     /* Defensive re-disable in case fault_trip was reached from a path
      * that didn't already disable (no-op if already safe). */
     output_stage_disable();
-    output_feedback_set_duty(0.0f);
+    output_feedback_disable();
 
     printf("FAULT: %s\n", fault_type_name(g_active));
 

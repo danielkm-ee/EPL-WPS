@@ -140,12 +140,11 @@ static void periph_tick(void)
     if (g_ctx.state == OPERATING) {
         float power_w = sensors_avg_input_current_amps() * INPUT_SUPPLY_VOLTAGE;
         float ratio   = power_w / MAX_INPUT_POWER_SETPOINT_WATTS;
-        if (ratio < 0.0f) ratio = 0.0f;
-        if (ratio > 1.0f) ratio = 1.0f;
-        /* Active-low feedback: 0.0 = full power request, 1.0 = idle. */
-        output_feedback_set_duty(1.0f - ratio);
+        /* Encode power ratio as feedback frequency: MAX = full power,
+         * MIN = no power. set_ratio clamps internally. */
+        output_feedback_set_ratio(ratio);
     } else {
-        output_feedback_set_duty(0.0f);
+        output_feedback_disable();
     }
 }
 

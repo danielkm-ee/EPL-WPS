@@ -33,7 +33,8 @@ sudo udevadm control --reload && sudo udevadm trigger
 ## Build
 ```bash
 cd firmware && mkdir build && cd build
-PICO_SDK_PATH=$HOME/.local/share/pico-sdk cmake ..
+PICO_SDK_PATH=$HOME/.local/share/pico-sdk cmake .. \
+    -Dpicotool_DIR=$HOME/.local/share/picotool-src/install/lib/cmake/picotool
 make -j
 ```
 Artifacts land in `firmware/build/`: `epl_wps.elf`, `epl_wps.bin`,
@@ -62,7 +63,7 @@ The Powercore is a two-phase EDM power supply:
 - **High-voltage phase** ignites the discharge across the wire/workpiece gap. A boost-converter module produces 64–100 V DC, set by a TPL0401B digital potentiometer over I2C.
 - **High-current phase** delivers the bulk discharge energy through a pi-filter module. There is no programmable rail here — the filter draws from the 48 V input.
 - Four MOSFETs (`SW_ENABLE_PIN`, `SW_HIGH_CURRENT_PHASE_PIN`, `SW_HIGH_VOLTAGE_PHASE_PIN`, plus the comparator-fed `OUTPUT_OVERCURRENT_SET_PIN`) are gated by RP2040 PWM. `SW_HIGH_VOLTAGE_PHASE_PIN` and `SW_HIGH_CURRENT_PHASE_PIN` are P-channel and therefore inverted; `SW_ENABLE_PIN` is N-channel.
-- A motion controller (typically LinuxCNC) toggles `EDM_ENABLE_PIN` to request machining and reads back a power-ratio PWM on `EDM_FEEDBACK_PIN`.
+- A motion controller (typically LinuxCNC) toggles `EDM_ENABLE_PIN` to request machining and reads back a power-ratio signal on `EDM_FEEDBACK_PIN`, encoded as PWM frequency at a fixed duty cycle (configurable range, default 50–500 Hz).
 - Three ADC channels: `PMM_ISENSE_PIN` (input current, 200 mV/A), `OUTPUT_VSENSE_PIN` (output voltage via 99.6:1 divider), `OUTPUT_ISENSE_PIN` (output current, TMCS1133 25 mV/A).
 - Three fault sources: `PMM_FAULT_PIN` (active-low), `BOOST_PGOOD_PIN` (active-low), `OUTPUT_OVERCURRENT_PIN` (comparator, falling edge).
 
@@ -124,7 +125,8 @@ while (1):
         sensors_sample_input_current()
         if avg_input > MAX_SAFE_INPUT_CURRENT: fault_trip(POWER_OUT_OF_RANGE_FAULT)
         state ← gpio_get(EDM_ENABLE_PIN) ? OPERATING : IDLE
-        update EDM_FEEDBACK duty proportional to input power
+        OPERATING: output_feedback_set_ratio(input_power / MAX_INPUT_POWER_SETPOINT_WATTS)
+        IDLE:      output_feedback_disable()
 
     switch state:                             (4) state body
         OPERATING: lazy mode prep + output_run_isofreq / output_run_edge
@@ -152,7 +154,7 @@ If the operator requested a finite `params.discharge_count_target` and that coun
 
 **Edge-detection mode** — single-pulse workpiece probing.
 
-`output_setup_edge()` configures the main slice (`SW_ENABLE_PIN` + `SW_HIGH_CURRENT_PHASE_PIN`) at 5%/10 kHz with the HV slice off, after ramping the boost to `MIN_HIGH_VOLTAGE_PHASE_VOLTS`. The first overcurrent event sets `ctx->edge_detected`, `output_overcurrent_isr` disables the stage immediately, and `output_run_edge()` drives feedback to 1.0 for 1 s as a signal to the host, then back to 0.0 for 1 s, and clears the latch.
+`output_setup_edge()` configures the main slice (`SW_ENABLE_PIN` + `SW_HIGH_CURRENT_PHASE_PIN`) at 5%/10 kHz with the HV slice off, after ramping the boost to `MIN_HIGH_VOLTAGE_PHASE_VOLTS`. The first overcurrent event sets `ctx->edge_detected`, `output_overcurrent_isr` disables the stage immediately, and `output_run_edge()` drives feedback to `EDM_FEEDBACK_FREQ_MAX_HZ` for 1 s as a signal to the host, then disables the PWM (line idles low) for 1 s, and clears the latch.
 
 ### Fault model
 Three sources of trips:
@@ -175,7 +177,7 @@ USB-CDC line interface, exact-match dispatch, strict argc validation, `OK:` / `E
 | `READ_HVP_VOLTAGE` | Averaged read of boost output voltage |
 | `UPDATE_DPOT_VOLTAGE_TABLE` | Re-run the startup voltage-table sweep |
 | `SET_DPOT_FROM_VTABLE <volts>` | Ramp DPOT to closest table entry |
-| `SET_FEEDBACK_DUTY <0..1>` | Directly set the EDM_FEEDBACK duty (development/diagnostic) |
+| `SET_FEEDBACK_RATIO <0..1>` | Directly set the EDM_FEEDBACK power ratio (encoded as PWM frequency) (development/diagnostic) |
 | `HELP [<command>]` | List all commands, or print full usage for one |
 
 Unknown commands print `ERROR: Unknown command 'X'` followed by the full HELP listing.

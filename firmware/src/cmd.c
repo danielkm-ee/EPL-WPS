@@ -69,7 +69,7 @@ static void cmd_handle_set_dpot                 (int argc, char **argv, main_ctx
 static void cmd_handle_read_hvp_voltage         (int argc, char **argv, main_ctx_t *ctx);
 static void cmd_handle_update_dpot_voltage_table(int argc, char **argv, main_ctx_t *ctx);
 static void cmd_handle_set_dpot_from_vtable     (int argc, char **argv, main_ctx_t *ctx);
-static void cmd_handle_set_feedback_duty        (int argc, char **argv, main_ctx_t *ctx);
+static void cmd_handle_set_feedback_ratio       (int argc, char **argv, main_ctx_t *ctx);
 static void cmd_handle_help                     (int argc, char **argv, main_ctx_t *ctx);
 
 /* --- Command table -------------------------------------------------- */
@@ -115,9 +115,9 @@ static const cmd_entry_t g_cmd_table[] = {
       "SET_DPOT_FROM_VTABLE <volts>",
       "Ramp the boost converter to a target voltage via the cal table." },
 
-    { "SET_FEEDBACK_DUTY",         1, 1, cmd_handle_set_feedback_duty,
-      "SET_FEEDBACK_DUTY <0.0..1.0>",
-      "Override the EDM_FEEDBACK PWM duty (active-low signal to motion ctrl)." },
+    { "SET_FEEDBACK_RATIO",        1, 1, cmd_handle_set_feedback_ratio,
+      "SET_FEEDBACK_RATIO <0.0..1.0>",
+      "Override the EDM_FEEDBACK power ratio (encoded as PWM frequency)." },
 
     { "HELP",                      0, 1, cmd_handle_help,
       "HELP [<command>]",
@@ -474,16 +474,16 @@ static void cmd_handle_set_dpot_from_vtable(int argc, char **argv, main_ctx_t *c
     printf("OK: Boost ramped to %d V\n", target);
 }
 
-static void cmd_handle_set_feedback_duty(int argc, char **argv, main_ctx_t *ctx)
+static void cmd_handle_set_feedback_ratio(int argc, char **argv, main_ctx_t *ctx)
 {
     (void)argc; (void)ctx;
-    float d = strtof(argv[1], NULL);
-    if (d < 0.0f || d > 1.0f) {
-        printf("ERROR: Duty cycle must be between 0.0 and 1.0\n");
+    float r = strtof(argv[1], NULL);
+    if (r < 0.0f || r > 1.0f) {
+        printf("ERROR: Ratio must be between 0.0 and 1.0\n");
         return;
     }
-    output_feedback_set_duty(d);
-    printf("OK: Feedback duty set to %.3f\n", (double)d);
+    output_feedback_set_ratio(r);
+    printf("OK: Feedback ratio set to %.3f\n", (double)r);
 }
 
 static void cmd_handle_help(int argc, char **argv, main_ctx_t *ctx)
