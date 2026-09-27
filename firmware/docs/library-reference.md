@@ -1,4 +1,4 @@
-# EPL WPS Firmware — Library Reference
+# EPL Spark EDM Firmware — Library Reference
 
 This document describes the modules under `firmware/src/` that together
 implement the EPL Wire EDM Power Supply firmware. It is intended for a
@@ -6,16 +6,13 @@ developer who has just joined the project and wants to understand what
 each module owns, how state is partitioned, and where to look when
 adding a feature.
 
-The firmware is **pure C11 against the Raspberry Pi Pico SDK**. There
-is no Arduino runtime: stdio, ADC, PWM, GPIO, I2C, IRQ, and watchdog
-all come from the SDK directly. All headers are wrapped in
-`extern "C"` guards so individual translation units can be compiled as
-C++ if ever needed.
+The firmware is **pure C11 against the Raspberry Pi Pico SDK**.
 
-For build / flash instructions see `firmware/README.md`. For the *why*
-behind the current shape see `refactor-report.md`. For pin-level and
-electrical detail see `config.h` and the schematics under
-`circuit-boards/`.
+For setup, the build, the USB-CDC command table, and a short theory of
+operation see `firmware/README.md` — this document does not repeat
+that material. For the *why* behind the current shape see
+`refactor-report.md`. For pin-level and electrical detail see
+`config.h` and the schematics under `docs/schematics/`.
 
 ---
 
@@ -71,7 +68,7 @@ Three design rules drive the partitioning:
    individually `volatile`.
 
 Module APIs follow `module_func_desc()` naming. Constants are
-`SCREAMING_SNAKE_CASE`. K&R braces. See `CLAUDE.md`.
+`SCREAMING_SNAKE_CASE`. K&R braces.
 
 ---
 
@@ -439,18 +436,57 @@ Dispatch rules:
 - `HELP` (no args) prints the full listing; `HELP <CMD>` prints the
   usage and description for one entry.
 
-| Command | Effect |
-|---|---|
-| `SEND_TELEMETRY` | Print the status block immediately. |
-| `SET_ALL_PARAMETERS <discharges> <duty> <freq> <init_v>` | Validate against `config.h` SOA limits including computed on/off times, commit on success, clear `mode_prep_done`. |
-| `EDGE_DETECTION_MODE` / `EDM_ISOFREQUENCY_MODE` | `output_stage_disable()`, `ctx_set_mode(...)`, print confirmation. |
-| `RESET_DEVICE` | `output_stage_disable()`, drain stdio, `watchdog_reboot(0,0,0)`. |
-| `SET_DPOT <pos>` | Direct DPOT write (debug). |
-| `READ_HVP_VOLTAGE` | 10-sample averaged HV-rail read. |
-| `UPDATE_DPOT_VOLTAGE_TABLE` | Re-run the boost cal sweep. |
-| `SET_DPOT_FROM_VTABLE <volts>` | Ramp DPOT to closest table entry. |
-| `SET_FEEDBACK_RATIO <0..1>` | Override the EDM_FEEDBACK power ratio (encoded as PWM frequency) (debug). |
-| `HELP [<command>]` | List all commands, or print full usage for one. |
+See `firmware/README.md` for the current command table. The table is
+maintained by hand alongside `g_cmd_table[]` — keep both in sync when
+adding a command.
+
+#### Adding a new command
+
+Everything lives in `cmd.c`; no other module needs to change unless
+the command touches new state.
+
+1. **Forward-declare and implement a static handler** matching
+   `cmd_handler_fn`:
+   ```c
+   static void cmd_handle_my_command(int argc, char **argv, main_ctx_t *ctx);
+   ```
+   `argv[0]` is the command name itself; `argv[1..]` are the
+   already-tokenized arguments. Print `OK: ...` on success or
+   `ERROR: ...` on failure — there is no other return channel. Example
+   (the real `SET_TELEMETRY` handler):
+   ```c
+   static void cmd_handle_set_telemetry(int argc, char **argv, main_ctx_t *ctx)
+   {
+       (void)argc;
+       if (strcmp(argv[1], "on") == 0 || strcmp(argv[1], "ON") == 0) {
+           ctx->periodic_telemetry_enabled = true;
+           printf("OK: Periodic telemetry ON\n");
+       } else {
+           ctx->periodic_telemetry_enabled = false;
+           printf("OK: Periodic telemetry OFF\n");
+       }
+   }
+   ```
+2. **Add a row to `g_cmd_table[]`**, before the `{ NULL, ... }`
+   sentinel:
+   ```c
+   { "SET_TELEMETRY", 1, 1, cmd_handle_set_telemetry,
+     "SET_TELEMETRY <on/off>",
+     "Enable or disable telemetry updates." },
+   ```
+   `argc_min`/`argc_max` count arguments **excluding** the command name
+   (`cmd_dispatch` checks `argc - 1` against this range). Use equal
+   `min`/`max` for a fixed arg count, or a range for optional args (see
+   `HELP`'s `0, 1`).
+3. **Add the row to the table in `README.md`** by hand — it is not
+   generated from `g_cmd_table[]`.
+
+That's the whole surface: `cmd_lookup`, `cmd_dispatch`, the strict-argc
+check, and `HELP`/`cmd_print_listing` all key off `g_cmd_table[]`
+automatically, so a new entry is picked up with no other wiring. The
+one exception is a command needing more than `MAX_CMD_PARAMS` (4)
+arguments — that constant (`config.h`) sizes the tokenizer's fixed
+`argv` array and would need to grow first.
 
 Validation in `apply_parameters()` is the only path through which the
 device's output behaviour changes via serial. It validates against
@@ -468,7 +504,7 @@ so the next OPERATING entry re-applies the new values.
 
 1. `ctx_init(&g_ctx)`.
 2. `cmd_init()` — `stdio_init_all` + 1 s USB-CDC enumeration delay; print
-   `Software Version: 1.0-beta`.
+   `Software Version: rev0`.
 3. STATUS LED + EDM_ENABLE GPIO directions.
 4. `output_init()` — cache PWM slice/channel descriptors, configure
    feedback PWM, force the four output switches into safe-OFF SIO state.
