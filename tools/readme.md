@@ -2,7 +2,7 @@
 Here is a place for tools and services built around the Wire Power Supply.
 
 ## wps-monitor.py
-![wps ui](../docs/img/wps-ui.png)
+![wps ui](./wps-ui.png)
 
 This is a GUI for controlling viewing the Wire Power Supply. It includes a serial monitor and controls for setting the output voltage, resetting the device, and connecting to the device. 
 
